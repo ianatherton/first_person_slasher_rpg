@@ -1,7 +1,11 @@
 extends Control
 
+@export var show_debug_info = true  # Toggle for debug information
+
 @onready var stamina_bar = %StaminaBar
 @onready var stamina_value = %StaminaValue
+@onready var debug_container = %DebugContainer
+@onready var fps_counter = %FPSCounter
 
 func _ready():
 	# Connect to player's stamina signal
@@ -13,6 +17,14 @@ func _ready():
 		_on_player_stamina_changed(player.stamina, player.max_stamina)
 	else:
 		print("ERROR: Could not find player to connect stamina signal!")
+	
+	# Set initial debug visibility
+	debug_container.visible = show_debug_info
+
+func _process(_delta):
+	if show_debug_info:
+		# Update FPS counter
+		fps_counter.text = "FPS: " + str(Engine.get_frames_per_second())
 
 func _on_player_stamina_changed(current: float, maximum: float):
 	# Update the bar
@@ -27,3 +39,9 @@ func _on_player_stamina_changed(current: float, maximum: float):
 		stamina_bar.modulate = Color(1, 0.3, 0.3)  # Red tint when low
 	else:
 		stamina_bar.modulate = Color(1, 1, 1)  # Normal color
+
+# Toggle debug information visibility
+func toggle_debug_info():
+	show_debug_info = !show_debug_info
+	debug_container.visible = show_debug_info
+	return show_debug_info

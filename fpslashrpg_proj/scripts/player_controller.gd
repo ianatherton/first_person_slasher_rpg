@@ -16,6 +16,7 @@ extends CharacterBody3D
 @onready var head = $Head
 @onready var weapon_holder = $Head/WeaponHolder
 @onready var current_weapon = $Head/WeaponHolder/MorningStar  # Updated to match actual node name
+@onready var player_hud = $Head/Camera3D/PlayerHUD
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var is_sprinting = false
@@ -69,6 +70,12 @@ func _input(event):
 	# Attack with left mouse button
 	if event.is_action_pressed("attack"):
 		perform_attack()
+		
+	# Toggle debug info with F3 key
+	if event is InputEventKey and event.keycode == KEY_F3 and event.pressed and not event.echo:
+		if player_hud and player_hud.has_method("toggle_debug_info"):
+			var debug_enabled = player_hud.toggle_debug_info()
+			print("Debug info " + ("enabled" if debug_enabled else "disabled"))
 
 func _physics_process(delta):
 	# Apply gravity

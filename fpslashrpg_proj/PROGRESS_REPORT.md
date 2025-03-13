@@ -13,6 +13,7 @@ This document tracks the development progress of the First Person Slasher RPG pr
 - Stamina bar display in HUD
 - Weapon type classification system (1h crush, 1h slash, 2h)
 - Multiple attack animations per weapon type
+- Debug UI with FPS counter (toggleable with F3)
 
 ## Recent Changes
 
@@ -50,6 +51,10 @@ This document tracks the development progress of the First Person Slasher RPG pr
     - "side_swing" - A horizontal swing from left to right
   - Added random selection between attack animations for variety
   - Improved animation system to properly handle wind-up and follow-through
+- Added debug UI functionality:
+  - Implemented FPS counter in the top-left corner
+  - Created toggleable debug interface (press F3 to toggle)
+  - Set up system for easily adding more debug information in the future
 
 ## Technical Notes
 - The morning star model uses "mgrip" node as the grip area and "hitbox" for collision detection
@@ -60,6 +65,7 @@ This document tracks the development progress of the First Person Slasher RPG pr
 - Attacking consumes stamina (25 points by default)
 - The weapon system now supports different weapon types with unique animation sets
 - Stamina display updates in real-time using signals from the player controller
+- Debug UI can be toggled with the F3 key and is implemented through a modular system
 
 ## Next Steps
 - Add more weapons with different attack patterns
