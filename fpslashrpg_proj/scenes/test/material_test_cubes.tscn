@@ -1,0 +1,109 @@
+[gd_scene load_steps=9 format=3 uid="uid://c5lhmidauo73e"]
+
+[ext_resource type="Script" path="res://scripts/test/test_surface.gd" id="1_4h6sq"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_8hfwo"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_lxcyu"]
+albedo_color = Color(0.85, 0.85, 0.92, 1)
+metallic = 1.0
+roughness = 0.3
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_vjh3n"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4v2uu"]
+albedo_color = Color(0.65098, 0.65098, 0.65098, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5aevj"]
+albedo_color = Color(0.596078, 0.388235, 0.196078, 1)
+roughness = 0.7
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_jvnt2"]
+albedo_color = Color(0.909804, 0.219608, 0.219608, 1)
+roughness = 0.5
+
+[sub_resource type="LabelSettings" id="LabelSettings_11h5r"]
+font_size = 24
+outline_size = 4
+outline_color = Color(0, 0, 0, 1)
+
+[node name="MaterialTestCubes" type="Node3D"]
+
+[node name="MetalCube" type="StaticBody3D" parent="." groups=["metal"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, 0)
+script = ExtResource("1_4h6sq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MetalCube"]
+mesh = SubResource("BoxMesh_8hfwo")
+surface_material_override/0 = SubResource("StandardMaterial3D_lxcyu")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MetalCube"]
+shape = SubResource("BoxShape3D_vjh3n")
+
+[node name="Label3D" type="Label3D" parent="MetalCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+billboard = 1
+text = "METAL"
+font_size = 24
+
+[node name="StoneCube" type="StaticBody3D" parent="." groups=["stone"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, 1, 0)
+script = ExtResource("1_4h6sq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="StoneCube"]
+mesh = SubResource("BoxMesh_8hfwo")
+surface_material_override/0 = SubResource("StandardMaterial3D_4v2uu")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="StoneCube"]
+shape = SubResource("BoxShape3D_vjh3n")
+
+[node name="Label3D" type="Label3D" parent="StoneCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+billboard = 1
+text = "STONE"
+font_size = 24
+
+[node name="WoodCube" type="StaticBody3D" parent="." groups=["wood"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 0)
+script = ExtResource("1_4h6sq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="WoodCube"]
+mesh = SubResource("BoxMesh_8hfwo")
+surface_material_override/0 = SubResource("StandardMaterial3D_5aevj")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="WoodCube"]
+shape = SubResource("BoxShape3D_vjh3n")
+
+[node name="Label3D" type="Label3D" parent="WoodCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+billboard = 1
+text = "WOOD"
+font_size = 24
+
+[node name="FleshCube" type="StaticBody3D" parent="." groups=["flesh"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 1, 0)
+script = ExtResource("1_4h6sq")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="FleshCube"]
+mesh = SubResource("BoxMesh_8hfwo")
+surface_material_override/0 = SubResource("StandardMaterial3D_jvnt2")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FleshCube"]
+shape = SubResource("BoxShape3D_vjh3n")
+
+[node name="Label3D" type="Label3D" parent="FleshCube"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+billboard = 1
+text = "FLESH"
+font_size = 24
+
+[node name="InfoLabel" type="Label" parent="."]
+offset_left = 19.0
+offset_top = 17.0
+offset_right = 331.0
+offset_bottom = 100.0
+text = "TEST MATERIAL CUBES
+Hit each cube to see different
+impact particle effects"
+label_settings = SubResource("LabelSettings_11h5r")

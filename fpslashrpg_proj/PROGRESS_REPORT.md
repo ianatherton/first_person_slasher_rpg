@@ -14,6 +14,7 @@ This document tracks the development progress of the First Person Slasher RPG pr
 - Weapon type classification system (1h crush, 1h slash, 2h)
 - Multiple attack animations per weapon type
 - Debug UI with FPS counter (toggleable with F3)
+- Impact particle effects for weapon hits on different surfaces
 
 ## Recent Changes
 
@@ -55,6 +56,12 @@ This document tracks the development progress of the First Person Slasher RPG pr
   - Implemented FPS counter in the top-left corner
   - Created toggleable debug interface (press F3 to toggle)
   - Set up system for easily adding more debug information in the future
+- Implemented weapon impact particle system:
+  - Created particle effects that spawn at the point of impact
+  - Designed different particle effects based on surface material (metal, stone, wood, flesh)
+  - Added precise impact point detection using raycasting
+  - Implemented automatic cleanup of particle effects to prevent memory leaks
+  - Made particles one-shot with proper orientation to the hit surface
 
 ## Technical Notes
 - The morning star model uses "mgrip" node as the grip area and "hitbox" for collision detection
@@ -66,6 +73,8 @@ This document tracks the development progress of the First Person Slasher RPG pr
 - The weapon system now supports different weapon types with unique animation sets
 - Stamina display updates in real-time using signals from the player controller
 - Debug UI can be toggled with the F3 key and is implemented through a modular system
+- Impact particles are triggered in the weapon's hitbox collision handler and are automatically destroyed after playback
+- Surface type detection for particles is based on object groups and naming conventions
 
 ## Next Steps
 - Add more weapons with different attack patterns

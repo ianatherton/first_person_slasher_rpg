@@ -16,6 +16,9 @@ enum WeaponType {
 
 @export var weapon_type: WeaponType = WeaponType.ONE_HANDED_CRUSH
 
+# Impact particle system reference
+@export var impact_particle_scene: PackedScene = preload("res://scenes/effects/impact_particles.tscn")
+
 var can_attack = true
 var attack_timer = 0.0
 var is_attacking = false
@@ -26,9 +29,9 @@ var interactables_hit = []  # Track objects already hit in a single swing
 @onready var player = get_parent().get_parent()  # Assumes this is attached to Head node of player
 
 # References to weapon components
+var weapon_model: Node3D = null
 var grip_area: Node3D = null
 var hitbox: Area3D = null
-var weapon_model: Node3D = null
 
 # Attack animations for one-handed crush weapons
 var attack_animations = {
@@ -48,6 +51,7 @@ var attack_animations = {
 	]
 }
 
+# Swing animation variables
 var is_swinging = false
 var swing_progress = 0.0
 var swing_direction = 1
@@ -60,10 +64,13 @@ func _ready():
 		load_model(model_path)
 	else:
 		# Otherwise, look for an existing model in our children
-		weapon_model = find_mesh_instance(self)
+		for child in get_children():
+			if "model" in child.name.to_lower() or child is MeshInstance3D:
+				weapon_model = child
+				break
 	
 	# Setup components to handle attacks and positioning
-	find_weapon_components()
+	setup_weapon_components()
 	
 	# If we have a grip area, position the weapon relative to it
 	position_weapon()
@@ -73,10 +80,17 @@ func _ready():
 		anim_player = AnimationPlayer.new()
 		add_child(anim_player)
 		create_attack_animations()
+	
+	# Enable monitoring on the hitbox area
+	if hitbox:
+		hitbox.monitorable = true
+		hitbox.monitoring = true
 		
-	# Ensure the hitbox is properly connected for collision detection
-	if hitbox and not hitbox.is_connected("body_entered", _on_hitbox_body_entered):
-		hitbox.connect("body_entered", _on_hitbox_body_entered)
+		# Connect the signal for body entered (collision)
+		if not hitbox.is_connected("body_entered", _on_hitbox_body_entered):
+			hitbox.connect("body_entered", _on_hitbox_body_entered)
+		
+		print("Hitbox setup complete with collision detection")
 
 func load_model(path: String) -> void:
 	# Load and instance the specified model
@@ -94,64 +108,111 @@ func load_model(path: String) -> void:
 	else:
 		printerr("ERROR: Failed to load weapon model from path: ", path)
 
-func find_weapon_components() -> void:
-	# Look for the grip area and hitbox in our children
-	var grip_node = find_node_recursive(self, "Grip")
-	if not grip_node:
-		grip_node = find_node_recursive(self, "GripArea")
-	if not grip_node:
-		grip_node = find_node_recursive(self, "mgrip")
+func setup_weapon_components() -> void:
+	print("Setting up weapon components...")
 	
-	grip_area = grip_node  # This ensures grip_area is only assigned a Node3D or null, never a boolean
+	# Find the model if it's not already assigned
+	if not weapon_model:
+		for child in get_children():
+			if "model" in child.name.to_lower():
+				weapon_model = child
+				print("Found weapon model: ", child.name)
+				break
 	
-	# Make grip area invisible but keep its functionality
+	if not weapon_model:
+		printerr("ERROR: Could not find weapon model!")
+		return
+		
+	# Find grip area in the model
+	grip_area = find_node_by_name(weapon_model, "mgrip")
 	if grip_area:
 		print("Found grip area: ", grip_area.name)
 		make_node_invisible(grip_area)
 	else:
 		printerr("WARNING: No grip area found in weapon model")
 	
-	# For the hitbox, look for specific names or create one if not found
-	var hitbox_node = find_node_recursive(self, "HitBox") 
-	if not hitbox_node:
-		hitbox_node = find_node_recursive(self, "hitbox")
-	if not hitbox_node:
-		hitbox_node = find_node_recursive(self, "DamagingArea")
+	# Create a new hitbox area as a direct child of the weapon model
+	# This ensures it moves with the model during animations
+	create_hitbox()
+
+func create_hitbox() -> void:
+	print("Creating weapon hitbox...")
 	
-	# Make hitbox node invisible but keep its functionality
-	if hitbox_node:
-		make_node_invisible(hitbox_node)
+	# First, check if we already have a hitbox node
+	var existing_hitbox = find_node_by_name(weapon_model, "hitbox")
+	if existing_hitbox:
+		print("Found existing hitbox node: ", existing_hitbox.name)
 		
-	# If hitbox exists but is not an Area3D, create an Area3D as a child of it
-	if hitbox_node and not hitbox_node is Area3D:
-		hitbox = Area3D.new()
-		hitbox.name = "HitboxArea"
-		hitbox_node.add_child(hitbox)
-		
-		# Create collision shape for hitbox
-		create_hitbox_collision(hitbox, hitbox_node)
-	elif hitbox_node and hitbox_node is Area3D:
-		hitbox = hitbox_node
-	else:
-		# No hitbox found, try to create one based on the model
-		printerr("WARNING: No hitbox found in weapon model, attempting to create one")
-		var mesh_instance = find_mesh_instance(self)
-		
-		if mesh_instance:
+		# If it's already an Area3D, use it directly
+		if existing_hitbox is Area3D:
+			hitbox = existing_hitbox
+			make_node_invisible(hitbox)
+			print("Using existing Area3D hitbox")
+		else:
+			# Otherwise, create a new Area3D as a child of the existing hitbox
 			hitbox = Area3D.new()
 			hitbox.name = "HitboxArea"
-			add_child(hitbox)
-			create_hitbox_collision(hitbox, mesh_instance)
-		else:
-			printerr("ERROR: Could not find mesh to create hitbox from")
-	
-	# Connect signals for hitbox
-	if hitbox:
-		print("Hitbox configured: ", hitbox.name)
-		if not hitbox.is_connected("body_entered", _on_hitbox_body_entered):
-			hitbox.connect("body_entered", _on_hitbox_body_entered)
+			existing_hitbox.add_child(hitbox)
+			
+			# Make the original hitbox invisible but keep its functionality
+			make_node_invisible(existing_hitbox)
+			
+			# Create collision shape
+			var collision = create_collision_shape(existing_hitbox)
+			hitbox.add_child(collision)
+			print("Created hitbox as child of existing node")
 	else:
-		printerr("ERROR: Failed to create or find hitbox")
+		# No existing hitbox found, so create a new one
+		hitbox = Area3D.new()
+		hitbox.name = "WeaponHitbox"
+		
+		# Add it directly to the weapon model so it moves with animations
+		if weapon_model:
+			weapon_model.add_child(hitbox)
+			
+			# Create a collision shape for the hitbox
+			var collision = create_collision_shape(weapon_model)
+			hitbox.add_child(collision)
+			print("Created new hitbox attached to weapon model")
+		else:
+			add_child(hitbox)
+			var box_shape = BoxShape3D.new()
+			box_shape.size = Vector3(0.2, 0.2, 0.5)
+			
+			var collision = CollisionShape3D.new()
+			collision.shape = box_shape
+			hitbox.add_child(collision)
+			print("Created fallback hitbox (no weapon model found)")
+	
+	# Configure the hitbox
+	hitbox.collision_layer = 2  # Set to appropriate collision layer
+	hitbox.collision_mask = 1   # Set to detect objects on layer 1
+	print("Hitbox configuration complete")
+
+func create_collision_shape(source_node: Node) -> CollisionShape3D:
+	var collision = CollisionShape3D.new()
+	var shape = null
+	
+	# If the source is a MeshInstance3D, base the shape on its mesh
+	if source_node is MeshInstance3D and source_node.mesh:
+		var aabb = source_node.mesh.get_aabb()
+		shape = BoxShape3D.new()
+		shape.size = aabb.size
+		
+		# Adjust position to match the mesh's center
+		collision.position = aabb.position + aabb.size/2
+	else:
+		# Create a custom shape for the weapon head
+		shape = SphereShape3D.new()
+		shape.radius = 0.3  # Size of the weapon head
+		
+		# Position at the end of the weapon
+		if grip_area:
+			var offset = grip_area.position.length()
+			collision.position = Vector3(0, 0, -offset)
+	
+	collision.shape = shape
+	return collision
 
 func find_mesh_instance(node: Node) -> MeshInstance3D:
 	if node is MeshInstance3D:
@@ -164,55 +225,32 @@ func find_mesh_instance(node: Node) -> MeshInstance3D:
 	
 	return null
 
-func create_hitbox_collision(hitbox_area: Area3D, source_node: Node) -> void:
-	# Create collision shape based on the source node
-	var collision_shape = CollisionShape3D.new()
-	var shape
-	
-	if source_node is MeshInstance3D and source_node.mesh:
-		# Create shape based on mesh AABB
-		var aabb = source_node.mesh.get_aabb()
-		shape = BoxShape3D.new()
-		shape.size = aabb.size
+func find_node_by_name(parent: Node, name_part: String) -> Node:
+	if parent.name.to_lower().contains(name_part.to_lower()):
+		return parent
 		
-		# Position the collision shape to match the mesh
-		collision_shape.position = aabb.position + aabb.size/2
-	else:
-		# Generic shape as fallback
-		shape = BoxShape3D.new()
-		shape.size = Vector3(0.2, 0.2, 0.2)
-	
-	collision_shape.shape = shape
-	
-	# Make collision shape invisible
-	collision_shape.visible = false
-	
-	hitbox_area.add_child(collision_shape)
-
-func position_weapon() -> void:
-	# If we have a grip area, position the weapon so the grip is at the origin
-	if grip_area:
-		# Move the weapon model so the grip area is at the origin
-		var grip_global_pos = grip_area.global_position
-		var weapon_global_pos = global_position
-		var offset = grip_global_pos - weapon_global_pos
-		
-		# Apply the inverse of this offset to position the weapon
-		position -= offset
-	
-	# Reset rotation to default
-	rotation = Vector3.ZERO
-
-func find_node_recursive(node: Node, name_pattern: String) -> Node:
-	if node.name.to_lower().contains(name_pattern.to_lower()):
-		return node
-	
-	for child in node.get_children():
-		var found = find_node_recursive(child, name_pattern)
+	for child in parent.get_children():
+		var found = find_node_by_name(child, name_part)
 		if found:
 			return found
 	
 	return null
+
+func position_weapon() -> void:
+	# If we have a grip area, position the weapon so the grip is at the origin
+	if grip_area and weapon_model:
+		# Calculate the offset from the grip to the model's origin
+		var grip_local_pos = grip_area.position
+		
+		# Apply the inverse of this offset to position the weapon
+		weapon_model.position = -grip_local_pos
+		
+		print("Positioned weapon based on grip area")
+	else:
+		print("No grip area found for positioning")
+	
+	# Reset rotation to default
+	rotation = Vector3.ZERO
 
 func _process(delta):
 	# Process attack cooldown
@@ -229,17 +267,18 @@ func _process(delta):
 			is_swinging = false
 			swing_progress = 0.0
 			interactables_hit.clear()  # Reset hit objects
+			
+			# Print debug information about available hitbox
+			if hitbox:
+				print("Swing complete, hitbox at position: ", hitbox.global_position)
 		
-		# Apply interpolated rotation
+		# Apply interpolated rotation to the weapon model
 		if weapon_model:
 			weapon_model.rotation = lerp(
 				swing_origin_rotation,
 				swing_target_rotation,
 				ease_out_cubic(swing_progress)
 			)
-	
-	# We're now handling attack input from player_controller.gd
-	# No need to check for attack input here anymore
 
 func ease_out_cubic(x: float) -> float:
 	return 1.0 - pow(1.0 - x, 3)
@@ -268,6 +307,12 @@ func attack():
 	else:
 		# Perform manual swing animation with the chosen type
 		start_swing_animation(attack_type)
+	
+	# Debug output for hitbox
+	if hitbox:
+		print("Attack started with hitbox at: ", hitbox.global_position)
+	else:
+		print("WARNING: No hitbox found for attack!")
 	
 	# Reset attacking state after animation completes
 	await get_tree().create_timer(0.5).timeout
@@ -333,7 +378,8 @@ func create_attack_animations():
 			var animation = Animation.new()
 			var track_idx = animation.add_track(Animation.TYPE_VALUE)
 			
-			animation.track_set_path(track_idx, ".:rotation")
+			# Target the weapon model's rotation
+			animation.track_set_path(track_idx, "%MorningStarModel:rotation")
 			animation.track_insert_key(track_idx, 0.0, Vector3.ZERO)
 			
 			# Wind-up phase
@@ -354,18 +400,85 @@ func create_attack_animations():
 			print("Created animation: " + anim_data.name)
 
 func _on_hitbox_body_entered(body):
+	print("Hitbox detected collision with: " + body.name)
+	
 	# Prevents hitting the same object multiple times in a single swing
 	if body in interactables_hit:
+		print("Already hit this object in this swing, ignoring")
 		return
 		
 	if is_attacking and body != player:
+		print("Valid hit on: " + body.name)
+		
+		# Determine impact type based on what was hit
+		var impact_type = determine_impact_type(body)
+		
+		# Create impact particles at hit location
+		spawn_impact_particles(body, impact_type)
+		
+		# Handle damage or interaction
 		if body.has_method("take_damage"):
 			body.take_damage(damage)
-			interactables_hit.append(body)
 			print("Hit enemy with weapon!")
 		elif body.has_method("interact"):
 			body.interact()
-			interactables_hit.append(body)
+		
+		# Add to list of hit objects for this swing
+		interactables_hit.append(body)
+
+# Determine impact type based on what was hit
+func determine_impact_type(body) -> int:
+	var body_name = body.name.to_lower()
+	
+	# Check for specific types based on name or groups
+	if body.is_in_group("metal") or body_name.contains("metal"):
+		return 1  # Metal
+	elif body.is_in_group("stone") or body_name.contains("wall") or body_name.contains("floor") or body_name.contains("stone"):
+		return 2  # Stone
+	elif body.is_in_group("wood") or body_name.contains("wood"):
+		return 3  # Wood
+	elif body.is_in_group("enemy") or body.is_in_group("flesh") or body_name.contains("enemy"):
+		return 4  # Flesh
+	
+	# Default impact type
+	return 0  # Default
+
+# Spawn impact particles at the hit location
+func spawn_impact_particles(body, impact_type: int) -> void:
+	if not impact_particle_scene:
+		print("ERROR: No impact particle scene assigned!")
+		return
+		
+	if not hitbox:
+		print("ERROR: No hitbox to determine impact position!")
+		return
+	
+	# Create particle instance
+	var particles = impact_particle_scene.instantiate()
+	get_tree().current_scene.add_child(particles)
+	
+	# Position at impact point - use hitbox position for now
+	# In a full physics system, we would get the exact contact point
+	var impact_position = hitbox.global_position
+	
+	# If the body has a collision shape, use its position for better precision
+	if body is CollisionObject3D:
+		for child in body.get_children():
+			if child is CollisionShape3D:
+				# Position particles at halfway point between hitbox and collision shape
+				impact_position = (hitbox.global_position + child.global_position) / 2
+				break
+	
+	particles.global_position = impact_position
+	
+	# Orient particles to face away from hitbox
+	var direction = (impact_position - global_position).normalized()
+	particles.look_at(particles.global_position + direction, Vector3.UP)
+	
+	# Play the impact effect with the determined type
+	if particles.has_method("play_impact"):
+		particles.play_impact(impact_type)
+		print("Spawned impact particles of type: " + str(impact_type) + " at " + str(impact_position))
 
 func make_node_invisible(node: Node) -> void:
 	if node is MeshInstance3D:

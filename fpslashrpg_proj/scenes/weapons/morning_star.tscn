@@ -1,7 +1,13 @@
-[gd_scene load_steps=3 format=3 uid="uid://dwjg23pfrkmdy"]
+[gd_scene load_steps=5 format=3 uid="uid://dwjg23pfrkmdy"]
 
 [ext_resource type="Script" path="res://scripts/weapon.gd" id="1_ks5cu"]
 [ext_resource type="PackedScene" path="res://assets/models/morning_star.blend" id="2_fkjtm"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ydl2j"]
+radius = 0.25
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_7nqhj"]
+size = Vector3(0.1, 0.1, 0.8)
 
 [node name="MorningStar" type="Node3D"]
 script = ExtResource("1_ks5cu")
@@ -13,5 +19,21 @@ swing_speed = 1.2
 weapon_type = 0
 
 [node name="MorningStarModel" parent="." instance=ExtResource("2_fkjtm")]
+
+[node name="HitboxHead" type="Area3D" parent="MorningStarModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.8)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MorningStarModel/HitboxHead"]
+shape = SubResource("SphereShape3D_ydl2j")
+
+[node name="HitboxShaft" type="Area3D" parent="MorningStarModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.4)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MorningStarModel/HitboxShaft"]
+shape = SubResource("BoxShape3D_7nqhj")
 
 [node name="AnimationPlayer" type="AnimationPlayer" parent="."]
