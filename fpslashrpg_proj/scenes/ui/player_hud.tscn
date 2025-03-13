@@ -1,0 +1,55 @@
+[gd_scene load_steps=3 format=3 uid="uid://dsn3a48fppmr2"]
+
+[ext_resource type="Script" path="res://scripts/ui/player_hud.gd" id="1_duxs1"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbmyj"]
+bg_color = Color(0.262745, 0.580392, 0.815686, 0.784314)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.14902, 0.168627, 0.266667, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="PlayerHUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_duxs1")
+
+[node name="StaminaContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -85.0
+offset_right = 220.0
+offset_bottom = -20.0
+grow_vertical = 0
+
+[node name="Label" type="Label" parent="StaminaContainer"]
+layout_mode = 2
+text = "STAMINA"
+horizontal_alignment = 1
+
+[node name="StaminaBar" type="ProgressBar" parent="StaminaContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/fill = SubResource("StyleBoxFlat_qbmyj")
+value = 100.0
+show_percentage = false
+
+[node name="StaminaValue" type="Label" parent="StaminaContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100 / 100"
+horizontal_alignment = 1

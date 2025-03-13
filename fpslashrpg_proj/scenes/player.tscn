@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3 uid="uid://bc31ksqcyhiw4"]
+
+[ext_resource type="Script" uid="uid://duapgfbrgfjm1" path="res://scripts/player_controller.gd" id="1_4g5cn"]
+[ext_resource type="PackedScene" uid="uid://dwjg23pfrkmdy" path="res://scenes/weapons/morning_star.tscn" id="2_c4wjm"]
+[ext_resource type="PackedScene" uid="uid://c7uyn3b6tvxrv" path="res://scenes/ui/crosshair.tscn" id="3_24dcn"]
+[ext_resource type="PackedScene" uid="uid://dsn3a48fppmr2" path="res://scenes/ui/player_hud.tscn" id="4_jydp4"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_3fv8a"]
+height = 1.8
+
+[node name="Player" type="CharacterBody3D" groups=["player"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
+script = ExtResource("1_4g5cn")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_3fv8a")
+
+[node name="Head" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Head"]
+
+[node name="Crosshair" parent="Head/Camera3D" instance=ExtResource("3_24dcn")]
+
+[node name="PlayerHUD" parent="Head/Camera3D" instance=ExtResource("4_jydp4")]
+
+[node name="WeaponHolder" type="Node3D" parent="Head"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.25, -0.3)
+
+[node name="MorningStar" parent="Head/WeaponHolder" instance=ExtResource("2_c4wjm")]
