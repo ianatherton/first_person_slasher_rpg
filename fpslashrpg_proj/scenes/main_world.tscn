@@ -1,10 +1,15 @@
-[gd_scene load_steps=11 format=3 uid="uid://da3vbr8vy82u1"]
+[gd_scene load_steps=12 format=3 uid="uid://da3vbr8vy82u1"]
 
 [ext_resource type="PackedScene" uid="uid://bc31ksqcyhiw4" path="res://scenes/player.tscn" id="1_ntm21"]
 [ext_resource type="PackedScene" uid="uid://c5lhmidauo73e" path="res://scenes/test/material_test_cubes.tscn" id="2_rqx1w"]
+[ext_resource type="Texture2D" uid="uid://cdcsjxhi5ox6i" path="res://assets/textures/tiling_grass1_mat Base Color.tga" id="3_8dbnq"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o4a1l"]
 albedo_color = Color(0.321569, 0.380392, 0.25098, 1)
+albedo_texture = ExtResource("3_8dbnq")
+uv1_scale = Vector3(0.2, 0.2, 0.2)
+uv1_triplanar = true
+texture_filter = 2
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_nkm6r"]
 material = SubResource("StandardMaterial3D_o4a1l")

@@ -10,12 +10,12 @@ extends CharacterBody3D
 @export var stamina_regen_rate = 10.0  # Per second
 @export var sprint_stamina_cost = 15.0  # Per second
 @export var stamina_regen_delay = 1.0  # Seconds to wait before regen starts
-@export var attack_stamina_cost = 25.0  # Cost per attack
+@export var attack_stamina_cost = 10.0  # Cost per attack
 
 @onready var camera = $Head/Camera3D
 @onready var head = $Head
-@onready var weapon_holder = $Head/WeaponHolder
-@onready var current_weapon = $Head/WeaponHolder/MorningStar  # Updated to match actual node name
+@onready var weapon_holder = $Head/Camera3D/WeaponHolder
+@onready var current_weapon = $Head/Camera3D/WeaponHolder/MorningStar
 @onready var player_hud = $Head/Camera3D/PlayerHUD
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
@@ -90,9 +90,19 @@ func _physics_process(delta):
 	# Handle sprinting and stamina
 	process_stamina(delta)
 	
-	# Calculate speed based on sprint state
-	var current_speed = speed * (sprint_speed_multiplier if is_sprinting else 1.0)
+	# Calculate speed based on sprint state and attack state
+	var current_speed = speed
+	var weapon = $Head/Camera3D/WeaponHolder/MorningStar
+	var attack_speed_penalty = 0.5 # 50% speed during attacks
+
+	# Apply sprint multiplier if sprinting
+	if is_sprinting:
+		current_speed *= sprint_speed_multiplier
 	
+	# Apply attack speed penalty if attacking
+	if weapon and weapon.has_method("is_attack_in_progress") and weapon.is_attack_in_progress():
+		current_speed *= attack_speed_penalty
+
 	# Movement
 	var input_dir = Input.get_vector("move_left", "move_right", "move_forward", "move_back")
 	var direction = (head.transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()

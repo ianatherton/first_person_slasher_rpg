@@ -1,6 +1,6 @@
 [gd_scene load_steps=9 format=3 uid="uid://c5lhmidauo73e"]
 
-[ext_resource type="Script" path="res://scripts/test/test_surface.gd" id="1_4h6sq"]
+[ext_resource type="Script" uid="uid://7vn8gxhrfscq" path="res://scripts/test/test_surface.gd" id="1_4h6sq"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_8hfwo"]
 
@@ -99,6 +99,7 @@ text = "FLESH"
 font_size = 24
 
 [node name="InfoLabel" type="Label" parent="."]
+visible = false
 offset_left = 19.0
 offset_top = 17.0
 offset_right = 331.0

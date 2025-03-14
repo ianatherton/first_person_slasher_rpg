@@ -19,10 +19,13 @@ enum WeaponType {
 # Impact particle system reference
 @export var impact_particle_scene: PackedScene = preload("res://scenes/effects/impact_particles.tscn")
 
+# Collision exclusion list - for entities the weapon should not hit
+@export var collision_exclusions = ["player", "Player", "PlayerBody", "self"]
+
 var can_attack = true
 var attack_timer = 0.0
 var is_attacking = false
-var interactables_hit = []  # Track objects already hit in a single swing
+var interactables_hit = []  # Track what we've hit during the current swing
 
 # Reference to components
 @onready var anim_player = $AnimationPlayer if has_node("AnimationPlayer") else null
@@ -33,20 +36,39 @@ var weapon_model: Node3D = null
 var grip_area: Node3D = null
 var hitbox: Area3D = null
 
+# Public accessor to check attack status
+func is_attack_in_progress() -> bool:
+	return is_attacking
+
 # Attack animations for one-handed crush weapons
 var attack_animations = {
 	WeaponType.ONE_HANDED_CRUSH: [
 		{
 			"name": "overhead_smash",
 			"origin": Vector3.ZERO,
-			"target": Vector3(-0.8, 0.0, 0.3),   # Downward motion with slight rightward curve
-			"duration": 0.5
+			"target": Vector3(-1.2, 0.0, 0.2),   # Strong downward motion with slight rightward curve
+			"duration": 0.8,  # Slower swing
+			"position_offset_start": Vector3(0.0, 0.5, -0.1),  # Start high
+			"position_offset_mid": Vector3(0.0, 0.65, -0.3),   # Higher at midpoint
+			"position_offset_end": Vector3(0.0, -0.5, -0.4)    # Much lower end position
 		},
 		{
-			"name": "side_swing",
+			"name": "overhead_left",
 			"origin": Vector3.ZERO,
-			"target": Vector3(-0.3, -0.2, 1.0),  # Horizontal swing from left to right
-			"duration": 0.5
+			"target": Vector3(-1.1, -0.15, 0.1),  # Downward with slight left angle
+			"duration": 0.75,
+			"position_offset_start": Vector3(-0.1, 0.5, -0.1),  # Start high, slight left
+			"position_offset_mid": Vector3(-0.2, 0.6, -0.3),    # Higher at midpoint
+			"position_offset_end": Vector3(-0.3, -0.5, -0.3)    # Much lower end position
+		},
+		{
+			"name": "overhead_right",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-1.1, 0.15, 0.1),  # Downward with slight right angle
+			"duration": 0.75,
+			"position_offset_start": Vector3(0.1, 0.5, -0.1),   # Start high, slight right
+			"position_offset_mid": Vector3(0.2, 0.6, -0.3),     # Higher at midpoint
+			"position_offset_end": Vector3(0.3, -0.5, -0.3)     # Much lower end position
 		}
 	]
 }
@@ -57,6 +79,8 @@ var swing_progress = 0.0
 var swing_direction = 1
 var swing_origin_rotation = Vector3.ZERO
 var swing_target_rotation = Vector3.ZERO
+var swing_origin_position = Vector3.ZERO
+var swing_target_position = Vector3.ZERO
 
 func _ready():
 	if model_path:
@@ -187,6 +211,7 @@ func create_hitbox() -> void:
 	# Configure the hitbox
 	hitbox.collision_layer = 2  # Set to appropriate collision layer
 	hitbox.collision_mask = 1   # Set to detect objects on layer 1
+	hitbox.connect("body_entered", self._on_hitbox_body_entered)
 	print("Hitbox configuration complete")
 
 func create_collision_shape(source_node: Node) -> CollisionShape3D:
@@ -274,9 +299,31 @@ func _process(delta):
 		
 		# Apply interpolated rotation to the weapon model
 		if weapon_model:
+			var current_target_rotation = Vector3.ZERO
+			var current_target_position = Vector3.ZERO
+			var animation_data = null
+			if weapon_type in attack_animations:
+				for anim in attack_animations[weapon_type]:
+					if anim.name == "overhead_smash":
+						animation_data = anim
+						break
+			
+			if animation_data:
+				if swing_progress < 0.5:
+					current_target_rotation = animation_data.target * swing_progress * 2
+					current_target_position = animation_data.position_offset_start + (animation_data.position_offset_mid - animation_data.position_offset_start) * swing_progress * 2
+				else:
+					current_target_rotation = animation_data.target - (animation_data.target - Vector3.ZERO) * (swing_progress - 0.5) * 2
+					current_target_position = animation_data.position_offset_mid + (animation_data.position_offset_end - animation_data.position_offset_mid) * (swing_progress - 0.5) * 2
+			
 			weapon_model.rotation = lerp(
 				swing_origin_rotation,
-				swing_target_rotation,
+				current_target_rotation,
+				ease_out_cubic(swing_progress)
+			)
+			weapon_model.position = lerp(
+				swing_origin_position,
+				current_target_position,
 				ease_out_cubic(swing_progress)
 			)
 
@@ -350,9 +397,11 @@ func start_swing_animation(attack_name: String = ""):
 	
 	# Set origin and target rotations for the swing
 	swing_origin_rotation = weapon_model.rotation
+	swing_origin_position = weapon_model.position
 	
 	if animation_data:
 		swing_target_rotation = animation_data.target
+		swing_target_position = animation_data.position_offset_start
 		print("Using animation: " + animation_data.name)
 	else:
 		# Default animation if none found
@@ -361,6 +410,7 @@ func start_swing_animation(attack_name: String = ""):
 			swing_origin_rotation.y,
 			swing_origin_rotation.z + 1.2   # Swing to the right
 		)
+		swing_target_position = Vector3(0.0, 0.3, -0.4)
 	
 	# Add some slight random variation to make swings feel different
 	swing_target_rotation += Vector3(
@@ -400,31 +450,24 @@ func create_attack_animations():
 			print("Created animation: " + anim_data.name)
 
 func _on_hitbox_body_entered(body):
-	print("Hitbox detected collision with: " + body.name)
-	
-	# Prevents hitting the same object multiple times in a single swing
-	if body in interactables_hit:
-		print("Already hit this object in this swing, ignoring")
-		return
+	if is_attacking and not body in interactables_hit:
+		# Skip bodies in our exclusion list
+		for exclusion in collision_exclusions:
+			if body.is_in_group(exclusion) or body.name.to_lower().contains(exclusion.to_lower()):
+				print("Skipping collision with excluded object: ", body.name)
+				return
 		
-	if is_attacking and body != player:
-		print("Valid hit on: " + body.name)
+		# Add to hit list so we don't hit it again this swing
+		interactables_hit.append(body)
 		
-		# Determine impact type based on what was hit
-		var impact_type = determine_impact_type(body)
-		
-		# Create impact particles at hit location
-		spawn_impact_particles(body, impact_type)
-		
-		# Handle damage or interaction
+		# Damage logic
 		if body.has_method("take_damage"):
 			body.take_damage(damage)
-			print("Hit enemy with weapon!")
-		elif body.has_method("interact"):
-			body.interact()
-		
-		# Add to list of hit objects for this swing
-		interactables_hit.append(body)
+			print("Damaged: ", body.name)
+			
+		# Handle impact effects
+		var impact_type = determine_impact_type(body)
+		spawn_impact_particles(body, impact_type)
 
 # Determine impact type based on what was hit
 func determine_impact_type(body) -> int:

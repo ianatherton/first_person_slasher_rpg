@@ -1,6 +1,6 @@
-[gd_scene load_steps=3 format=3 uid="uid://dsn3a48fppmr2"]
+[gd_scene load_steps=3 format=3 uid="uid://c4si3ob3ixlyy"]
 
-[ext_resource type="Script" path="res://scripts/ui/player_hud.gd" id="1_duxs1"]
+[ext_resource type="Script" uid="uid://b1kav5sh3tjfd" path="res://scripts/ui/player_hud.gd" id="1_duxs1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbmyj"]
 bg_color = Color(0.262745, 0.580392, 0.815686, 0.784314)
@@ -66,4 +66,3 @@ offset_bottom = 120.0
 unique_name_in_owner = true
 layout_mode = 2
 text = "FPS: 60"
-horizontal_alignment = 0

@@ -14,8 +14,8 @@ script = ExtResource("1_ks5cu")
 damage = 40
 attack_range = 2.5
 attack_rate = 0.8
-stamina_cost = 15
-swing_speed = 1.2
+stamina_cost = 10
+swing_speed = 0.7
 weapon_type = 0
 
 [node name="MorningStarModel" parent="." instance=ExtResource("2_fkjtm")]
