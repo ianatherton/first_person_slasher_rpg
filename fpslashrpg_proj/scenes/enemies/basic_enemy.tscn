@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://b4j1mq50lj8xp"]
+
+[ext_resource type="Script" path="res://scripts/enemy_basic.gd" id="1_p8i8c"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_vqmcf"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b7iyw"]
+albedo_color = Color(0.752941, 0.207843, 0.243137, 1)
+roughness = 0.5
+
+[sub_resource type="SphereMesh" id="SphereMesh_6bjyb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2wpd1"]
+height = 2.0
+
+[node name="BasicEnemy" type="CharacterBody3D" groups=["enemy", "flesh"]]
+collision_layer = 2
+script = ExtResource("1_p8i8c")
+health = 25
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+mesh = SubResource("CapsuleMesh_vqmcf")
+surface_material_override/0 = SubResource("StandardMaterial3D_b7iyw")
+
+[node name="Eye1" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, 0.2, 0.5, -0.4)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_b7iyw")
+
+[node name="Eye2" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.2, 0, 0, 0, 0.2, 0, 0, 0, 0.2, -0.2, 0.5, -0.4)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("CapsuleShape3D_2wpd1")

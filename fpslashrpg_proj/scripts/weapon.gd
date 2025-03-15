@@ -6,6 +6,8 @@ extends Node3D
 @export var stamina_cost = 10
 @export var model_path: String = ""  # Path to the 3D model
 @export var swing_speed = 1.0  # Speed multiplier for swing animation
+@export var recoil_strength = 0.7  # How strong the recoil effect is (0-1)
+@export var recoil_duration = 0.15  # How long the recoil animation takes
 
 # Weapon type enum - for animation and behavior
 enum WeaponType {
@@ -26,6 +28,13 @@ var can_attack = true
 var attack_timer = 0.0
 var is_attacking = false
 var interactables_hit = []  # Track what we've hit during the current swing
+
+# Animation and impact feedback variables
+var has_hit_target = false
+var hit_recoil_active = false
+var hit_recoil_progress = 0.0
+var hit_position = Vector3.ZERO
+var hit_normal = Vector3.ZERO
 
 # Reference to components
 @onready var anim_player = $AnimationPlayer if has_node("AnimationPlayer") else null
@@ -81,6 +90,7 @@ var swing_origin_rotation = Vector3.ZERO
 var swing_target_rotation = Vector3.ZERO
 var swing_origin_position = Vector3.ZERO
 var swing_target_position = Vector3.ZERO
+var animation_data = null  # Store the current animation data
 
 func _ready():
 	if model_path:
@@ -209,8 +219,8 @@ func create_hitbox() -> void:
 			print("Created fallback hitbox (no weapon model found)")
 	
 	# Configure the hitbox
-	hitbox.collision_layer = 2  # Set to appropriate collision layer
-	hitbox.collision_mask = 1   # Set to detect objects on layer 1
+	hitbox.collision_layer = 8  # Set to layer 4 for weapon
+	hitbox.collision_mask = 7   # Set to detect layers 1, 2, and 3
 	hitbox.connect("body_entered", self._on_hitbox_body_entered)
 	print("Hitbox configuration complete")
 
@@ -285,8 +295,26 @@ func _process(delta):
 			can_attack = true
 			attack_timer = 0.0
 	
-	# Process swing animation
-	if is_swinging:
+	# Process hit recoil animation (has priority over regular swing)
+	if hit_recoil_active:
+		hit_recoil_progress += delta / recoil_duration
+		if hit_recoil_progress >= 1.0:
+			hit_recoil_active = false
+			hit_recoil_progress = 0.0
+			is_swinging = false
+			swing_progress = 0.0
+			interactables_hit.clear()
+			
+			# Return to ready position
+			if weapon_model:
+				weapon_model.rotation = swing_origin_rotation
+				weapon_model.position = swing_origin_position
+		else:
+			# Apply recoil animation - pulls back from the hit point
+			apply_hit_recoil(hit_recoil_progress)
+	
+	# Process swing animation (only if not in recoil)
+	elif is_swinging:
 		swing_progress += delta * 3.0 * swing_speed
 		if swing_progress >= 1.0:
 			is_swinging = false
@@ -298,15 +326,9 @@ func _process(delta):
 				print("Swing complete, hitbox at position: ", hitbox.global_position)
 		
 		# Apply interpolated rotation to the weapon model
-		if weapon_model:
+		if weapon_model and not has_hit_target:
 			var current_target_rotation = Vector3.ZERO
 			var current_target_position = Vector3.ZERO
-			var animation_data = null
-			if weapon_type in attack_animations:
-				for anim in attack_animations[weapon_type]:
-					if anim.name == "overhead_smash":
-						animation_data = anim
-						break
 			
 			if animation_data:
 				if swing_progress < 0.5:
@@ -327,8 +349,42 @@ func _process(delta):
 				ease_out_cubic(swing_progress)
 			)
 
+func apply_hit_recoil(progress: float) -> void:
+	if not weapon_model:
+		return
+	
+	# Calculate recoil animation - pulls back from the hit point
+	var recoil_curve = ease_in_out_cubic(progress)
+	
+	# Create a recoil effect that pulls back initially then returns to start
+	var recoil_factor = sin(progress * PI) * recoil_strength
+	
+	# Get the point where the weapon was in the swing when it hit
+	var current_rotation = weapon_model.rotation
+	var current_position = weapon_model.position
+	
+	# Pull back from impact point
+	var recoil_rotation = current_rotation + Vector3(0.3, 0, -0.2) * recoil_factor
+	var recoil_position = current_position + Vector3(0.1, 0.1, 0.2) * recoil_factor
+	
+	# Apply the recoil animation
+	weapon_model.rotation = lerp(current_rotation, recoil_rotation, recoil_curve)
+	weapon_model.position = lerp(current_position, recoil_position, recoil_curve)
+	
+	# Add slight shake at the peak of recoil
+	if progress > 0.2 and progress < 0.8:
+		var shake_intensity = 0.03 * recoil_strength * sin(progress * 50)
+		weapon_model.rotation += Vector3(
+			randf_range(-shake_intensity, shake_intensity),
+			randf_range(-shake_intensity, shake_intensity),
+			randf_range(-shake_intensity, shake_intensity)
+		)
+
 func ease_out_cubic(x: float) -> float:
 	return 1.0 - pow(1.0 - x, 3)
+
+func ease_in_out_cubic(x: float) -> float:
+	return 4 * x * x * x if x < 0.5 else 1 - pow(-2 * x + 2, 3) / 2
 
 func attack():
 	if is_attacking:
@@ -343,6 +399,8 @@ func attack():
 	can_attack = false
 	attack_timer = 0.0
 	interactables_hit.clear()
+	has_hit_target = false
+	hit_recoil_active = false
 	
 	# Get a random attack animation for this weapon type
 	var attack_type = choose_attack_animation()
@@ -382,9 +440,10 @@ func start_swing_animation(attack_name: String = ""):
 		
 	is_swinging = true
 	swing_progress = 0.0
+	has_hit_target = false
 	
 	# Find the animation data
-	var animation_data = null
+	animation_data = null
 	if weapon_type in attack_animations:
 		for anim in attack_animations[weapon_type]:
 			if anim.name == attack_name or attack_name == "":
@@ -464,10 +523,26 @@ func _on_hitbox_body_entered(body):
 		if body.has_method("take_damage"):
 			body.take_damage(damage)
 			print("Damaged: ", body.name)
-			
+		
+		# Stop the current animation and start recoil animation
+		has_hit_target = true
+		
+		# If using AnimationPlayer, stop it
+		if anim_player and anim_player.is_playing():
+			anim_player.stop()
+		
+		# Capture the current weapon state for recoil animation
+		if weapon_model:
+			hit_recoil_active = true
+			hit_recoil_progress = 0.0
+		
 		# Handle impact effects
 		var impact_type = determine_impact_type(body)
 		spawn_impact_particles(body, impact_type)
+		
+		# Add screen shake or camera effect if this is the player's weapon
+		if player and player.has_method("add_camera_shake"):
+			player.add_camera_shake(0.2 * recoil_strength, 0.2)
 
 # Determine impact type based on what was hit
 func determine_impact_type(body) -> int:

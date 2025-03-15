@@ -1,0 +1,44 @@
+[gd_scene load_steps=7 format=3 uid="uid://db1vxwvxvpgn8"]
+
+[ext_resource type="Script" path="res://scripts/enemy_basic.gd" id="1_vwnol"]
+[ext_resource type="PackedScene" uid="uid://cccq66l0k2ycg" path="res://scenes/effects/death_particles.tscn" id="2_bqm4r"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_vqmcf"]
+radius = 0.3
+height = 1.2
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b7iyw"]
+albedo_color = Color(0.054902, 0.568627, 0.262745, 1)
+roughness = 0.7
+
+[sub_resource type="SphereMesh" id="SphereMesh_6bjyb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2wpd1"]
+radius = 0.3
+height = 1.2
+
+[node name="WeakEnemy" type="CharacterBody3D" groups=["enemy", "flesh"]]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_vwnol")
+health = 20
+death_particles = ExtResource("2_bqm4r")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+mesh = SubResource("CapsuleMesh_vqmcf")
+surface_material_override/0 = SubResource("StandardMaterial3D_b7iyw")
+
+[node name="Eye1" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, 0.15, 0.3, -0.25)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+
+[node name="Eye2" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1, -0.15, 0.3, -0.25)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.6, 0)
+shape = SubResource("CapsuleShape3D_2wpd1")

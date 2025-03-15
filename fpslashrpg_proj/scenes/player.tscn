@@ -1,12 +1,145 @@
-[gd_scene load_steps=6 format=3 uid="uid://bc31ksqcyhiw4"]
+[gd_scene load_steps=11 format=3 uid="uid://bc31ksqcyhiw4"]
 
 [ext_resource type="Script" uid="uid://duapgfbrgfjm1" path="res://scripts/player_controller.gd" id="1_4g5cn"]
 [ext_resource type="PackedScene" uid="uid://dwjg23pfrkmdy" path="res://scenes/weapons/morning_star.tscn" id="2_c4wjm"]
 [ext_resource type="PackedScene" uid="uid://c7uyn3b6tvxrv" path="res://scenes/ui/crosshair.tscn" id="3_24dcn"]
-[ext_resource type="PackedScene" uid="uid://dsn3a48fppmr2" path="res://scenes/ui/player_hud.tscn" id="4_jydp4"]
+[ext_resource type="PackedScene" uid="uid://c4si3ob3ixlyy" path="res://scenes/ui/player_hud.tscn" id="4_jydp4"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_3fv8a"]
 height = 1.8
+
+[sub_resource type="Animation" id="Animation_qunap"]
+resource_name = "RESET"
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/WeaponHolder:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0.4, -0.373576, -0.3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Head/Camera3D/WeaponHolder:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_qf8ms"]
+resource_name = "idle"
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/WeaponHolder:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.5, 1),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0.4, -0.373576, -0.3), Vector3(0.4, -0.37, -0.3), Vector3(0.4, -0.373576, -0.3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Head/Camera3D/WeaponHolder:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.5, 1),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 0, 0.01), Vector3(0, 0, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_pnx8r"]
+resource_name = "sprint"
+length = 0.6
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/WeaponHolder:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3, 0.45, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0.4, -0.373576, -0.3), Vector3(0.43, -0.34, -0.3), Vector3(0.4, -0.373576, -0.3), Vector3(0.37, -0.34, -0.3), Vector3(0.4, -0.373576, -0.3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Head/Camera3D/WeaponHolder:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3, 0.45, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(-0.08, 0, 0.03), Vector3(0, 0, 0), Vector3(-0.08, 0, -0.03), Vector3(0, 0, 0)]
+}
+tracks/2/type = "value"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("Head:position")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"times": PackedFloat32Array(0, 0.15, 0.3, 0.45, 0.6),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0.5, 0), Vector3(0, 0.53, 0), Vector3(0, 0.5, 0), Vector3(0, 0.53, 0), Vector3(0, 0.5, 0)]
+}
+
+[sub_resource type="Animation" id="Animation_3m1vj"]
+resource_name = "walk"
+length = 0.8
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Head/Camera3D/WeaponHolder:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0.4, -0.373576, -0.3), Vector3(0.42, -0.35, -0.3), Vector3(0.4, -0.373576, -0.3), Vector3(0.38, -0.35, -0.3), Vector3(0.4, -0.373576, -0.3)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("Head/Camera3D/WeaponHolder:rotation")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.4, 0.6, 0.8),
+"transitions": PackedFloat32Array(1, 1, 1, 1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(-0.05, 0, 0.02), Vector3(0, 0, 0), Vector3(-0.05, 0, -0.02), Vector3(0, 0, 0)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_rl0lw"]
+_data = {
+&"RESET": SubResource("Animation_qunap"),
+&"idle": SubResource("Animation_qf8ms"),
+&"sprint": SubResource("Animation_pnx8r"),
+&"walk": SubResource("Animation_3m1vj")
+}
 
 [node name="Player" type="CharacterBody3D" groups=["player"]]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.9, 0)
@@ -25,6 +158,14 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 [node name="PlayerHUD" parent="Head/Camera3D" instance=ExtResource("4_jydp4")]
 
 [node name="WeaponHolder" type="Node3D" parent="Head/Camera3D"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.25, -0.3)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.4, -0.373576, -0.3)
 
 [node name="MorningStar" parent="Head/Camera3D/WeaponHolder" instance=ExtResource("2_c4wjm")]
+
+[node name="OmniLight3D" type="OmniLight3D" parent="Head/Camera3D/WeaponHolder"]
+light_color = Color(0.82, 0.64534, 0.2378, 1)
+
+[node name="MovementAnimations" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_rl0lw")
+}

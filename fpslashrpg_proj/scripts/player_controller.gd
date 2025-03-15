@@ -17,6 +17,7 @@ extends CharacterBody3D
 @onready var weapon_holder = $Head/Camera3D/WeaponHolder
 @onready var current_weapon = $Head/Camera3D/WeaponHolder/MorningStar
 @onready var player_hud = $Head/Camera3D/PlayerHUD
+@onready var movement_animations = $MovementAnimations
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var is_sprinting = false
@@ -27,6 +28,11 @@ var health = 100
 # Weapon variables
 var weapons = []
 var current_weapon_index = 0
+
+# Movement state tracking
+enum MovementState { IDLE, WALKING, SPRINTING }
+var current_movement_state = MovementState.IDLE
+var last_movement_state = MovementState.IDLE
 
 signal stamina_changed(current, maximum)
 signal health_changed(current, maximum)
@@ -48,6 +54,9 @@ func _ready():
 	
 	# Add player to the "player" group so enemies can find it
 	add_to_group("player")
+	
+	# Start in idle animation
+	movement_animations.play("idle")
 
 func _input(event):
 	if event is InputEventMouseMotion:
@@ -94,7 +103,7 @@ func _physics_process(delta):
 	var current_speed = speed
 	var weapon = $Head/Camera3D/WeaponHolder/MorningStar
 	var attack_speed_penalty = 0.5 # 50% speed during attacks
-
+	
 	# Apply sprint multiplier if sprinting
 	if is_sprinting:
 		current_speed *= sprint_speed_multiplier
@@ -115,6 +124,40 @@ func _physics_process(delta):
 		velocity.z = move_toward(velocity.z, 0, current_speed)
 	
 	move_and_slide()
+	
+	# Update movement state and animations
+	update_movement_state(direction)
+
+func update_movement_state(direction):
+	# Determine current movement state
+	last_movement_state = current_movement_state
+	
+	if direction.length() < 0.1:
+		current_movement_state = MovementState.IDLE
+	elif is_sprinting:
+		current_movement_state = MovementState.SPRINTING
+	else:
+		current_movement_state = MovementState.WALKING
+	
+	# Update animations based on movement state
+	if current_movement_state != last_movement_state:
+		match current_movement_state:
+			MovementState.IDLE:
+				movement_animations.play("idle")
+			MovementState.WALKING:
+				movement_animations.play("walk")
+			MovementState.SPRINTING:
+				movement_animations.play("sprint")
+	
+	# Adjust animation speed based on movement speed
+	if current_movement_state == MovementState.SPRINTING:
+		movement_animations.speed_scale = 1.5
+	elif current_movement_state == MovementState.WALKING:
+		# Calculate a smooth speed scale based on input magnitude
+		var input_magnitude = direction.length()
+		movement_animations.speed_scale = max(0.7, input_magnitude)
+	else:
+		movement_animations.speed_scale = 1.0
 
 func process_stamina(delta):
 	is_sprinting = Input.is_action_pressed("sprint") and Input.is_action_pressed("move_forward") and stamina > 0

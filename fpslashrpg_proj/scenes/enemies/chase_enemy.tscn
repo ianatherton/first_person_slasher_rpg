@@ -1,0 +1,97 @@
+[gd_scene load_steps=9 format=3 uid="uid://c86q6s62x7ahv"]
+
+[ext_resource type="Script" path="res://scripts/enemy_chase.gd" id="1_jdhga"]
+[ext_resource type="PackedScene" uid="uid://cccq66l0k2ycg" path="res://scenes/effects/death_particles.tscn" id="2_yq0c4"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_vqmcf"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_b7iyw"]
+albedo_color = Color(0.8, 0.15, 0.15, 1)
+roughness = 0.7
+emission_enabled = true
+emission = Color(0.301961, 0, 0, 1)
+emission_energy_multiplier = 0.2
+
+[sub_resource type="SphereMesh" id="SphereMesh_6bjyb"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_2yonv"]
+albedo_color = Color(1, 0.843137, 0, 1)
+emission_enabled = true
+emission = Color(1, 0.843137, 0, 1)
+emission_energy_multiplier = 0.5
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_2wpd1"]
+radius = 0.4
+height = 1.6
+
+[sub_resource type="Animation" id="Animation_g23vb"]
+resource_name = "attack"
+length = 0.5
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("MeshInstance3D:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.5),
+"transitions": PackedFloat32Array(0.5, 1.5, 1),
+"update": 0,
+"values": [Vector3(0, 0.8, 0), Vector3(0, 0.8, -0.4), Vector3(0, 0.8, 0)]
+}
+tracks/1/type = "value"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("MeshInstance3D:scale")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"times": PackedFloat32Array(0, 0.2, 0.5),
+"transitions": PackedFloat32Array(0.5, 1.5, 1),
+"update": 0,
+"values": [Vector3(1, 1, 1), Vector3(1.2, 0.8, 1.3), Vector3(1, 1, 1)]
+}
+
+[node name="ChaseEnemy" type="CharacterBody3D" groups=["enemy", "flesh"]]
+collision_layer = 4
+collision_mask = 3
+script = ExtResource("1_jdhga")
+detection_range = 15.0
+chase_speed = 3.0
+aggression = 1.5
+attack_range = 1.5
+attack_cooldown = 1.0
+attack_damage = 10
+death_particles = ExtResource("2_yq0c4")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+mesh = SubResource("CapsuleMesh_vqmcf")
+surface_material_override/0 = SubResource("StandardMaterial3D_b7iyw")
+
+[node name="Eye1" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, 0.15, 0.4, -0.35)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_2yonv")
+
+[node name="Eye2" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(0.15, 0, 0, 0, 0.15, 0, 0, 0, 0.15, -0.15, 0.4, -0.35)
+mesh = SubResource("SphereMesh_6bjyb")
+skeleton = NodePath("../..")
+surface_material_override/0 = SubResource("StandardMaterial3D_2yonv")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.8, 0)
+shape = SubResource("CapsuleShape3D_2wpd1")
+
+[node name="AlertSound" type="AudioStreamPlayer3D" parent="."]
+volume_db = -10.0
+max_distance = 15.0
+
+[node name="AttackAnimation" type="AnimationPlayer" parent="."]
+libraries = {
+"": SubResource("Animation_g23vb")
+}
