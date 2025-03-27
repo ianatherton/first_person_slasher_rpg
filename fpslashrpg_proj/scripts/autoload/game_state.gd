@@ -66,6 +66,11 @@ func set_max_stamina(new_max: float) -> void:
 	var events = get_node("/root/Events")
 	events.emit_signal("player_stamina_changed", player_stamina, player_max_stamina)
 
+func set_stamina(new_stamina: float) -> void:
+	player_stamina = clamp(new_stamina, 0.0, player_max_stamina)
+	var events = get_node("/root/Events")
+	events.emit_signal("player_stamina_changed", player_stamina, player_max_stamina)
+
 func player_died() -> void:
 	var events = get_node("/root/Events")
 	events.emit_signal("player_died")

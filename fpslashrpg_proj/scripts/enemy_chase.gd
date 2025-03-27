@@ -1,16 +1,15 @@
 extends "res://scripts/enemy_basic.gd"
 
-@export var detection_range = 15.0  # How far the enemy can see
 @export var chase_speed = 3.0       # Movement speed when chasing
 @export var aggression = 1.5        # Higher values make the enemy more aggressive
-@export var attack_range = 1.5      # How close the enemy needs to be to attack
 @export var attack_cooldown = 1.0   # Time between attacks
 @export var attack_damage = 10      # Damage dealt to player
 
-var player = null
 var can_attack = true
 var attack_timer = 0.0
 var current_state = State.IDLE
+var stun_timer = null
+var attack_area: Area3D
 
 enum State {
 	IDLE,
@@ -30,60 +29,66 @@ func _ready():
 	# Print health to confirm it's properly set
 	print("Chase enemy initialized with health: ", health)
 	
-	# Find the player
-	player = get_tree().get_nodes_in_group("player")
-	if player.size() > 0:
-		player = player[0]
-	else:
-		player = null
-		print("Chase enemy couldn't find player!")
+	# Create stun timer
+	stun_timer = Timer.new()
+	stun_timer.one_shot = true
+	add_child(stun_timer)
+	stun_timer.timeout.connect(Callable(self, "_on_stun_timer_timeout"))
+	
+	# Create attack area - we need a smaller, more precise one than the parent
+	attack_area = Area3D.new()
+	attack_area.name = "ChaseAttackArea"
+	add_child(attack_area)
+	
+	# Add collision shape to attack area
+	var attack_collision = CollisionShape3D.new()
+	var attack_sphere = SphereShape3D.new()
+	attack_sphere.radius = 1.5  # Attack range
+	attack_collision.shape = attack_sphere
+	attack_area.add_child(attack_collision)
+	
+	# Connect signals for attack range detection
+	attack_area.body_entered.connect(Callable(self, "_on_chase_attack_area_body_entered"))
 
-func _physics_process(delta):
-	if is_dead:
+func _physics_process(_delta):
+	if is_dead or get_node("/root/GameState").game_paused:
 		return
-		
-	# Check for player detection and state transitions
-	update_state()
 	
 	match current_state:
 		State.IDLE:
-			process_idle(delta)
+			process_idle()
 		State.CHASE:
-			process_chase(delta)
+			process_chase(_delta)
 		State.ATTACK:
-			process_attack(delta)
+			process_attack(_delta)
 		State.STUNNED:
-			process_stunned(delta)
+			process_stunned()
 	
 	# Call parent to handle gravity and movement
-	super._physics_process(delta)
+	super._physics_process(_delta)
 
-func update_state():
-	if is_dead or not player:
-		return
-		
-	var distance_to_player = global_position.distance_to(player.global_position)
+# Override the parent's detection method
+func _on_detection_area_body_entered(body):
+	super._on_detection_area_body_entered(body)
 	
-	# State transitions
-	match current_state:
-		State.IDLE:
-			if distance_to_player < detection_range:
-				current_state = State.CHASE
-				$AlertSound.play()
-		State.CHASE:
-			if distance_to_player > detection_range * 1.5:
-				current_state = State.IDLE
-			elif distance_to_player < attack_range:
-				current_state = State.ATTACK
-		State.ATTACK:
-			if distance_to_player > attack_range * 1.2:
-				current_state = State.CHASE
-		State.STUNNED:
-			# Stay stunned until the timer expires
-			pass
+	if body.is_in_group("player"):
+		current_state = State.CHASE
+		if has_node("AlertSound"):
+			$AlertSound.play()
 
-func process_idle(_delta):
-	# Simple idle behavior - just wait for player
+# Override the parent's detection exit method
+func _on_detection_area_body_exited(body):
+	super._on_detection_area_body_exited(body)
+	
+	if body.is_in_group("player") and body == player:
+		current_state = State.IDLE
+
+func _on_chase_attack_area_body_entered(body):
+	if body.is_in_group("player") and body == player and current_state == State.CHASE:
+		current_state = State.ATTACK
+
+func process_idle():
+	# Simple idle behavior - just wait for player detection
 	velocity.x = 0
 	velocity.z = 0
 
@@ -124,48 +129,47 @@ func process_attack(delta):
 	# Attack if possible
 	if can_attack and player:
 		attempt_attack()
+		
+	# Check if player moved out of range
+	if player and global_position.distance_to(player.global_position) > 2.0:
+		current_state = State.CHASE
 
 func attempt_attack():
 	can_attack = false
 	attack_timer = 0.0
 	
 	# Visual attack feedback
-	$AttackAnimation.play("attack")
+	if has_node("AttackAnimation"):
+		$AttackAnimation.play("attack")
 	
 	# Try to damage player
 	if player and player.has_method("take_damage"):
-		var distance = global_position.distance_to(player.global_position)
-		if distance <= attack_range * 1.2:
-			player.take_damage(attack_damage)
+		player.take_damage(attack_damage)
+		# Signal attack
+		get_node("/root/Events").emit_signal("enemy_attacked", self, player, attack_damage)
 
-func process_stunned(_delta):
+func process_stunned():
 	velocity.x = 0
 	velocity.z = 0
 
 func take_damage(amount):
-	# Override parent method to add custom behavior
-	print("Chase enemy taking damage: ", amount, " (Current health: ", health, ")")
+	# Call the parent method first to handle basic damage functionality
+	super.take_damage(amount)
 	
-	# Flash red when taking damage
+	# Flash red when taking damage (this is in addition to parent's handling)
 	if $MeshInstance3D:
 		var tween = create_tween()
-		tween.tween_property($MeshInstance3D, "modulate", Color(1.5, 0.3, 0.3), 0.05)
-		tween.tween_property($MeshInstance3D, "modulate", Color(1, 1, 1), 0.15)
+		tween.tween_property($MeshInstance3D, "modulate", Color(1, 0.3, 0.3), 0.1)
+		tween.tween_property($MeshInstance3D, "modulate", Color(1, 1, 1), 0.1)
 	
-	# Enter stunned state briefly
+	# Stun the enemy when taking damage
 	current_state = State.STUNNED
-	
-	# Create stun timer to return to chase after short delay
-	var stun_timer = get_tree().create_timer(0.5)
-	stun_timer.timeout.connect(func(): current_state = State.CHASE)
-	
-	# Apply damage and check health
-	health -= amount
-	
-	print("Chase enemy health after damage: ", health)
-	
-	if health <= 0:
-		print("Chase enemy killed!")
-		die()
+	stun_timer.start(0.5)  # Stun for half a second
+	if has_node("StunEffect"):
+		$StunEffect.emitting = true
+
+func _on_stun_timer_timeout():
+	if not is_dead and player_detected:
+		current_state = State.CHASE
 	else:
-		print("Chase enemy hurt but still alive with ", health, " health remaining")
+		current_state = State.IDLE

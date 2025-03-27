@@ -60,9 +60,29 @@ layout_mode = 0
 offset_left = 20.0
 offset_top = 20.0
 offset_right = 220.0
-offset_bottom = 120.0
+offset_bottom = 180.0
 
 [node name="FPSCounter" type="Label" parent="DebugContainer"]
 unique_name_in_owner = true
 layout_mode = 2
 text = "FPS: 60"
+
+[node name="DrawCallsCounter" type="Label" parent="DebugContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Draw Calls: 0"
+
+[node name="NodeCountCounter" type="Label" parent="DebugContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Nodes: 0"
+
+[node name="ObjectsCounter" type="Label" parent="DebugContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Objects: 0"
+
+[node name="MemoryCounter" type="Label" parent="DebugContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Memory: 0 MB"

@@ -100,6 +100,29 @@ func _input(event):
 			var debug_enabled = player_hud.toggle_debug_info()
 			print("Debug info " + ("enabled" if debug_enabled else "disabled"))
 
+func _process(_delta):
+	if game_state.game_paused:
+		return
+		
+	# Update GameState stamina
+	game_state.set_stamina(stamina)
+	
+	# Check for weapon switching
+	if Input.is_action_just_pressed("next_weapon"):
+		switch_weapon(1)
+	elif Input.is_action_just_pressed("prev_weapon"):
+		switch_weapon(-1)
+	
+	# Debug info toggle
+	if Input.is_action_just_pressed("toggle_debug") and player_hud:
+		var debug_state = player_hud.toggle_debug_info()
+		print("Debug info: " + ("ON" if debug_state else "OFF"))
+		
+	# Advanced metrics toggle
+	if Input.is_action_just_pressed("toggle_advanced_metrics") and player_hud:
+		var metrics_state = player_hud.toggle_advanced_metrics()
+		print("Advanced metrics: " + ("ON" if metrics_state else "OFF"))
+
 func _physics_process(delta):
 	# Apply gravity
 	if not is_on_floor():
