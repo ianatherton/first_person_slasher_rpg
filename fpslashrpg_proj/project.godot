@@ -17,6 +17,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+Events="*res://scripts/autoload/events.gd"
+GameState="*res://scripts/autoload/game_state.gd"
 GameManager="*res://scripts/game_manager.gd"
 
 [input]

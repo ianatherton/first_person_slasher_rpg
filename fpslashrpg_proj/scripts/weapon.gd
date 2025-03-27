@@ -121,8 +121,8 @@ func _ready():
 		hitbox.monitoring = true
 		
 		# Connect the signal for body entered (collision)
-		if not hitbox.is_connected("body_entered", _on_hitbox_body_entered):
-			hitbox.connect("body_entered", _on_hitbox_body_entered)
+		if not hitbox.is_connected("body_entered", Callable(self, "_on_hitbox_body_entered")):
+			hitbox.connect("body_entered", Callable(self, "_on_hitbox_body_entered"))
 		
 		print("Hitbox setup complete with collision detection")
 
@@ -221,7 +221,7 @@ func create_hitbox() -> void:
 	# Configure the hitbox
 	hitbox.collision_layer = 8  # Set to layer 4 for weapon
 	hitbox.collision_mask = 7   # Set to detect layers 1, 2, and 3
-	hitbox.connect("body_entered", self._on_hitbox_body_entered)
+	hitbox.connect("body_entered", Callable(self, "_on_hitbox_body_entered"))
 	print("Hitbox configuration complete")
 
 func create_collision_shape(source_node: Node) -> CollisionShape3D:

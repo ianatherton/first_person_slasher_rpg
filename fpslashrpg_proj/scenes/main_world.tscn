@@ -3,7 +3,7 @@
 [ext_resource type="PackedScene" uid="uid://bc31ksqcyhiw4" path="res://scenes/player.tscn" id="1_ntm21"]
 [ext_resource type="Texture2D" uid="uid://cdcsjxhi5ox6i" path="res://assets/textures/tiling_grass1_mat Base Color.tga" id="3_8dbnq"]
 [ext_resource type="PackedScene" uid="uid://db1vxwvxvpgn8" path="res://scenes/enemies/weak_enemy.tscn" id="4_wlrt8"]
-[ext_resource type="PackedScene" path="res://scenes/enemies/chase_enemy.tscn" id="5_0uwjb"]
+[ext_resource type="PackedScene" uid="uid://c86q6s62x7ahv" path="res://scenes/enemies/chase_enemy.tscn" id="5_0uwjb"]
 [ext_resource type="Texture2D" uid="uid://dsimiwxyae07b" path="res://assets/textures/tiling_brick1_mat Base Color.tga" id="6_5b40a"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_o4a1l"]

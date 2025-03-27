@@ -4,43 +4,51 @@ extends Control
 
 @onready var stamina_bar = %StaminaBar
 @onready var stamina_value = %StaminaValue
+@onready var health_bar = %HealthBar
+@onready var health_value = %HealthValue
 @onready var debug_container = %DebugContainer
 @onready var fps_counter = %FPSCounter
+@onready var events = get_node("/root/Events")
+@onready var game_state = get_node("/root/GameState")
 
 func _ready():
-	# Connect to player's stamina signal
-	var player = get_tree().get_first_node_in_group("player")
-	if player:
-		player.stamina_changed.connect(_on_player_stamina_changed)
-		
-		# Initialize with current stamina value
-		_on_player_stamina_changed(player.stamina, player.max_stamina)
-	else:
-		print("ERROR: Could not find player to connect stamina signal!")
+	# Connect to Events signals for stamina and health updates
+	events.connect("player_stamina_changed", Callable(self, "_on_stamina_changed"))
+	events.connect("player_health_changed", Callable(self, "_on_health_changed"))
+	
+	# Initialize with current values from GameState
+	_on_stamina_changed(game_state.player_stamina, game_state.player_max_stamina)
+	_on_health_changed(game_state.player_health, game_state.player_max_health)
 	
 	# Set initial debug visibility
 	debug_container.visible = show_debug_info
 
 func _process(_delta):
-	if show_debug_info:
-		# Update FPS counter
+	if fps_counter:
 		fps_counter.text = "FPS: " + str(Engine.get_frames_per_second())
 
-func _on_player_stamina_changed(current: float, maximum: float):
-	# Update the bar
-	stamina_bar.max_value = maximum
-	stamina_bar.value = current
+func update_health(current_health, max_health):
+	if health_bar:
+		health_bar.max_value = max_health
+		health_bar.value = current_health
 	
-	# Update the text
-	stamina_value.text = "%d / %d" % [int(current), int(maximum)]
-	
-	# Visual feedback when stamina is low
-	if current < maximum * 0.25:
-		stamina_bar.modulate = Color(1, 0.3, 0.3)  # Red tint when low
-	else:
-		stamina_bar.modulate = Color(1, 1, 1)  # Normal color
+	if health_value:
+		health_value.text = str(current_health) + "/" + str(max_health)
 
-# Toggle debug information visibility
+func update_stamina(current_stamina, max_stamina):
+	if stamina_bar:
+		stamina_bar.max_value = max_stamina
+		stamina_bar.value = current_stamina
+	
+	if stamina_value:
+		stamina_value.text = str(int(current_stamina)) + "/" + str(int(max_stamina))
+
+func _on_stamina_changed(current_stamina, max_stamina):
+	update_stamina(current_stamina, max_stamina)
+
+func _on_health_changed(current_health, max_health):
+	update_health(current_health, max_health)
+
 func toggle_debug_info():
 	show_debug_info = !show_debug_info
 	debug_container.visible = show_debug_info

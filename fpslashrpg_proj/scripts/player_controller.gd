@@ -18,12 +18,14 @@ extends CharacterBody3D
 @onready var current_weapon = $Head/Camera3D/WeaponHolder/MorningStar
 @onready var player_hud = $Head/Camera3D/PlayerHUD
 @onready var movement_animations = $MovementAnimations
+@onready var game_state = get_node("/root/GameState")
+@onready var events = get_node("/root/Events")
 
 var gravity = ProjectSettings.get_setting("physics/3d/default_gravity")
 var is_sprinting = false
-var stamina = max_stamina
+var stamina = 0.0
 var stamina_regen_timer = 0.0
-var health = 100
+var health = 0
 
 # Weapon variables
 var weapons = []
@@ -34,11 +36,17 @@ enum MovementState { IDLE, WALKING, SPRINTING }
 var current_movement_state = MovementState.IDLE
 var last_movement_state = MovementState.IDLE
 
-signal stamina_changed(current, maximum)
-signal health_changed(current, maximum)
-
 func _ready():
 	Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	
+	# Set initial health and stamina from GameState
+	health = game_state.player_health
+	stamina = game_state.player_stamina
+	max_stamina = game_state.player_max_stamina
+	
+	# Apply player's stamina settings to GameState
+	game_state.set_max_stamina(max_stamina)
+	game_state.stamina_regen_rate = stamina_regen_rate
 	
 	# Initialize weapons array with any weapons already in the holder
 	for child in weapon_holder.get_children():
@@ -57,6 +65,10 @@ func _ready():
 	
 	# Start in idle animation
 	movement_animations.play("idle")
+	
+	# Connect to GameState signals
+	events.connect("player_health_changed", Callable(self, "_on_health_changed"))
+	events.connect("player_stamina_changed", Callable(self, "_on_stamina_changed"))
 
 func _input(event):
 	if event is InputEventMouseMotion:
@@ -67,14 +79,16 @@ func _input(event):
 	if event.is_action_pressed("ui_cancel"):
 		if Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
 			Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+			game_state.pause_game(true)
 		else:
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+			game_state.pause_game(false)
 	
-	# Weapon switching - temporarily commented out until we define the actions
-	# if event.is_action_pressed("next_weapon"):
-	# 	switch_weapon(1)
-	# elif event.is_action_pressed("prev_weapon"):
-	# 	switch_weapon(-1)
+	# Weapon switching
+	if event.is_action_pressed("next_weapon"):
+		switch_weapon(1)
+	elif event.is_action_pressed("prev_weapon"):
+		switch_weapon(-1)
 		
 	# Attack with left mouse button
 	if event.is_action_pressed("attack"):
@@ -93,7 +107,7 @@ func _physics_process(delta):
 	
 	# Handle jump
 	if Input.is_action_just_pressed("jump") and is_on_floor():
-		if use_stamina(20):  # Jump costs stamina
+		if game_state.use_stamina(20):  # Jump costs stamina
 			velocity.y = jump_velocity
 	
 	# Handle sprinting and stamina
@@ -163,36 +177,33 @@ func process_stamina(delta):
 	is_sprinting = Input.is_action_pressed("sprint") and Input.is_action_pressed("move_forward") and stamina > 0
 	
 	if is_sprinting:
-		stamina = max(0, stamina - sprint_stamina_cost * delta)
-		stamina_regen_timer = 0
-		emit_signal("stamina_changed", stamina, max_stamina)
+		if game_state.use_stamina(sprint_stamina_cost * delta):
+			stamina = game_state.player_stamina
+			stamina_regen_timer = 0
 	else:
-		# Only regenerate after delay
-		if stamina < max_stamina:
-			stamina_regen_timer += delta
-			if stamina_regen_timer >= stamina_regen_delay:
-				stamina = min(max_stamina, stamina + stamina_regen_rate * delta)
-				emit_signal("stamina_changed", stamina, max_stamina)
+		# We don't need to regenerate stamina here anymore as it's handled by GameState
+		stamina = game_state.player_stamina
 
-func use_stamina(amount):
-	if stamina >= amount:
-		stamina -= amount
-		stamina_regen_timer = 0
-		emit_signal("stamina_changed", stamina, max_stamina)
-		return true
-	return false
+func _on_health_changed(new_health, max_health_value):
+	health = new_health
+	if player_hud and player_hud.has_method("update_health"):
+		player_hud.update_health(health, max_health_value)
+
+func _on_stamina_changed(new_stamina, max_stamina_value):
+	stamina = new_stamina
+	if player_hud and player_hud.has_method("update_stamina"):
+		player_hud.update_stamina(stamina, max_stamina_value)
 
 func take_damage(amount):
-	health -= amount
-	emit_signal("health_changed", health, 100)
+	game_state.damage_player(amount)
 	print("Player took " + str(amount) + " damage! Health: " + str(health))
-	
-	if health <= 0:
-		die()
 
-func die():
-	print("Player died!")
-	# Could implement respawn or game over logic here
+func perform_attack():
+	if current_weapon and current_weapon.has_method("attack"):
+		# Check if we can afford the stamina cost
+		if game_state.use_stamina(attack_stamina_cost):
+			current_weapon.attack()
+			events.emit_signal("player_attacked", current_weapon)
 
 func switch_weapon(direction):
 	if weapons.size() <= 1:
@@ -202,25 +213,14 @@ func switch_weapon(direction):
 	if current_weapon:
 		current_weapon.visible = false
 	
-	# Update index with wrap-around
+	# Calculate new index with wrap-around
 	current_weapon_index = (current_weapon_index + direction) % weapons.size()
 	if current_weapon_index < 0:
 		current_weapon_index = weapons.size() - 1
 	
-	# Update reference and show weapon
+	# Set and show new weapon
 	current_weapon = weapons[current_weapon_index]
 	current_weapon.visible = true
-
-func perform_attack():
-	print("Attempting to attack!")
 	
-	# Check if we have a valid weapon
-	if current_weapon and current_weapon.has_method("attack"):
-		# Check stamina cost
-		if use_stamina(attack_stamina_cost):
-			print("Attack executed with " + current_weapon.name)
-			current_weapon.attack()
-		else:
-			print("Not enough stamina to attack!")
-	else:
-		print("No valid weapon to attack with!")
+	print("Switched to weapon: " + current_weapon.name)
+	events.emit_signal("player_weapon_changed", current_weapon_index)
