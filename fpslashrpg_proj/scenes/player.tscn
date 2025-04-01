@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://dwjg23pfrkmdy" path="res://scenes/weapons/morning_star.tscn" id="2_c4wjm"]
 [ext_resource type="PackedScene" uid="uid://c7uyn3b6tvxrv" path="res://scenes/ui/crosshair.tscn" id="3_24dcn"]
 [ext_resource type="PackedScene" uid="uid://c4si3ob3ixlyy" path="res://scenes/ui/player_hud.tscn" id="4_jydp4"]
+[ext_resource type="PackedScene" uid="uid://brdmk10jrh48j" path="res://scenes/weapons/short_sword.tscn" id="5_bfn5m"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_3fv8a"]
 height = 1.8
@@ -161,6 +162,9 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, -0.373576, -0.3)
 
 [node name="MorningStar" parent="Head/Camera3D/WeaponHolder" instance=ExtResource("2_c4wjm")]
+
+[node name="ShortSword" parent="Head/Camera3D/WeaponHolder" instance=ExtResource("5_bfn5m")]
+visible = false
 
 [node name="OmniLight3D" type="OmniLight3D" parent="Head/Camera3D/WeaponHolder"]
 light_color = Color(0.82, 0.64534, 0.2378, 1)

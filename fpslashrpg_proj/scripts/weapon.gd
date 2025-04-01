@@ -4,7 +4,7 @@ extends Node3D
 @export var attack_range = 2.0
 @export var attack_rate = 1.0  # attacks per second
 @export var stamina_cost = 10
-@export var model_path: String = ""  # Path to the 3D model
+@export var model_node_path: String = ""  # Path to the 3D model
 @export var swing_speed = 1.0  # Speed multiplier for swing animation
 @export var recoil_strength = 0.7  # How strong the recoil effect is (0-1)
 @export var recoil_duration = 0.15  # How long the recoil animation takes
@@ -49,7 +49,7 @@ var hitbox: Area3D = null
 func is_attack_in_progress() -> bool:
 	return is_attacking
 
-# Attack animations for one-handed crush weapons
+# Attack animations for one-handed crush and slash weapons
 var attack_animations = {
 	WeaponType.ONE_HANDED_CRUSH: [
 		{
@@ -79,6 +79,35 @@ var attack_animations = {
 			"position_offset_mid": Vector3(0.2, 0.6, -0.3),     # Higher at midpoint
 			"position_offset_end": Vector3(0.3, -0.5, -0.3)     # Much lower end position
 		}
+	],
+	WeaponType.ONE_HANDED_SLASH: [
+		{
+			"name": "horizontal_slash_right",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.3, 1.2, 0.2),   # Horizontal slash right to left
+			"duration": 0.6,  # Faster than crush
+			"position_offset_start": Vector3(0.3, 0.1, -0.1),  # Start right
+			"position_offset_mid": Vector3(0.0, 0.2, -0.2),   # Middle position
+			"position_offset_end": Vector3(-0.3, 0.1, -0.1)    # End left
+		},
+		{
+			"name": "horizontal_slash_left",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.3, -1.2, 0.2),  # Horizontal slash left to right
+			"duration": 0.6,
+			"position_offset_start": Vector3(-0.3, 0.1, -0.1),  # Start left
+			"position_offset_mid": Vector3(0.0, 0.2, -0.2),    # Middle position
+			"position_offset_end": Vector3(0.3, 0.1, -0.1)    # End right
+		},
+		{
+			"name": "diagonal_slash",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.8, 0.8, 0.2),  # Diagonal slash
+			"duration": 0.65,
+			"position_offset_start": Vector3(0.2, -0.2, -0.1),  # Start lower right
+			"position_offset_mid": Vector3(0.0, 0.0, -0.2),     # Middle position
+			"position_offset_end": Vector3(-0.2, 0.2, -0.1)     # End upper left
+		}
 	]
 }
 
@@ -93,9 +122,9 @@ var swing_target_position = Vector3.ZERO
 var animation_data = null  # Store the current animation data
 
 func _ready():
-	if model_path:
+	if model_node_path:
 		# If a model path was provided, load the model
-		load_model(model_path)
+		load_model(model_node_path)
 	else:
 		# Otherwise, look for an existing model in our children
 		for child in get_children():
@@ -479,6 +508,9 @@ func start_swing_animation(attack_name: String = ""):
 	)
 
 func create_attack_animations():
+	# Create an animation library for the weapon
+	var animation_library = AnimationLibrary.new()
+	
 	# Create animations for the current weapon type
 	if weapon_type in attack_animations:
 		var animations = attack_animations[weapon_type]
@@ -487,8 +519,18 @@ func create_attack_animations():
 			var animation = Animation.new()
 			var track_idx = animation.add_track(Animation.TYPE_VALUE)
 			
+			# Get the proper path to the weapon model
+			var anim_target_path = ""
+			if weapon_model:
+				anim_target_path = weapon_model.get_path()
+				anim_target_path = NodePath(anim_target_path.get_concatenated_names())
+				if anim_target_path.is_empty():
+					anim_target_path = "%MorningStarModel"
+			else:
+				anim_target_path = "%MorningStarModel"
+			
 			# Target the weapon model's rotation
-			animation.track_set_path(track_idx, "%MorningStarModel:rotation")
+			animation.track_set_path(track_idx, str(anim_target_path) + ":rotation")
 			animation.track_insert_key(track_idx, 0.0, Vector3.ZERO)
 			
 			# Wind-up phase
@@ -505,8 +547,14 @@ func create_attack_animations():
 			animation.length = anim_data.duration
 			animation.loop_mode = Animation.LOOP_NONE
 			
-			anim_player.add_animation(anim_data.name, animation)
+			# Add animation to the library
+			animation_library.add_animation(anim_data.name, animation)
 			print("Created animation: " + anim_data.name)
+	
+	# Add the animation library to the animation player
+	if animation_library.get_animation_list().size() > 0:
+		anim_player.add_animation_library("weapon_animations", animation_library)
+		print("Added animation library with " + str(animation_library.get_animation_list().size()) + " animations")
 
 func _on_hitbox_body_entered(body):
 	if is_attacking and not body in interactables_hit:

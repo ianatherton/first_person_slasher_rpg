@@ -1,9 +1,21 @@
-[gd_scene load_steps=3 format=3 uid="uid://c4si3ob3ixlyy"]
+[gd_scene load_steps=4 format=3 uid="uid://c4si3ob3ixlyy"]
 
 [ext_resource type="Script" uid="uid://b1kav5sh3tjfd" path="res://scripts/ui/player_hud.gd" id="1_duxs1"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_qbmyj"]
 bg_color = Color(0.262745, 0.580392, 0.815686, 0.784314)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.14902, 0.168627, 0.266667, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_weapon"]
+bg_color = Color(0.764706, 0.584314, 0.188235, 0.784314)
 border_width_left = 2
 border_width_top = 2
 border_width_right = 2
@@ -52,6 +64,120 @@ show_percentage = false
 unique_name_in_owner = true
 layout_mode = 2
 text = "100 / 100"
+horizontal_alignment = 1
+
+[node name="HealthContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -220.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = 85.0
+grow_horizontal = 0
+
+[node name="Label" type="Label" parent="HealthContainer"]
+layout_mode = 2
+text = "HEALTH"
+horizontal_alignment = 1
+
+[node name="HealthBar" type="ProgressBar" parent="HealthContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_styles/fill = SubResource("StyleBoxFlat_qbmyj")
+value = 100.0
+show_percentage = false
+
+[node name="HealthValue" type="Label" parent="HealthContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "100 / 100"
+horizontal_alignment = 1
+
+[node name="WeaponIndicatorContainer" type="VBoxContainer" parent="."]
+unique_name_in_owner = true
+layout_mode = 1
+anchors_preset = 3
+anchor_left = 1.0
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = -220.0
+offset_top = -85.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 0
+grow_vertical = 0
+
+[node name="Label" type="Label" parent="WeaponIndicatorContainer"]
+layout_mode = 2
+text = "WEAPON"
+horizontal_alignment = 1
+
+[node name="WeaponSlots" type="HBoxContainer" parent="WeaponIndicatorContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+alignment = 1
+
+[node name="Slot1" type="Panel" parent="WeaponIndicatorContainer/WeaponSlots"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_weapon")
+
+[node name="Label" type="Label" parent="WeaponIndicatorContainer/WeaponSlots/Slot1"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot2" type="Panel" parent="WeaponIndicatorContainer/WeaponSlots"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="WeaponIndicatorContainer/WeaponSlots/Slot2"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "2"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="Slot3" type="Panel" parent="WeaponIndicatorContainer/WeaponSlots"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Label" type="Label" parent="WeaponIndicatorContainer/WeaponSlots/Slot3"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "3"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="WeaponName" type="Label" parent="WeaponIndicatorContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Morning Star"
 horizontal_alignment = 1
 
 [node name="DebugContainer" type="VBoxContainer" parent="."]

@@ -12,6 +12,15 @@ extends Control
 @onready var events = get_node("/root/Events")
 @onready var game_state = get_node("/root/GameState")
 
+# Weapon indicator references
+@onready var weapon_indicator_container = %WeaponIndicatorContainer
+@onready var weapon_slots = %WeaponSlots
+@onready var slot1 = %Slot1
+@onready var slot2 = %Slot2
+@onready var slot3 = %Slot3
+@onready var weapon_name = %WeaponName
+var weapon_slots_array = []
+
 # Advanced performance metrics
 @onready var draw_calls_counter = %DrawCallsCounter
 @onready var node_count_counter = %NodeCountCounter
@@ -22,10 +31,15 @@ extends Control
 var update_metrics_timer = 0.0
 var metrics_update_interval = 0.5  # Update advanced metrics every half-second to reduce overhead
 
+# Styling for weapon slots
+var active_style = null
+var inactive_style = null
+
 func _ready():
 	# Connect to Events signals for stamina and health updates
 	events.connect("player_stamina_changed", Callable(self, "_on_stamina_changed"))
 	events.connect("player_health_changed", Callable(self, "_on_health_changed"))
+	events.connect("player_weapon_changed", Callable(self, "_on_weapon_changed"))
 	
 	# Initialize with current values from GameState
 	_on_stamina_changed(game_state.player_stamina, game_state.player_max_stamina)
@@ -36,6 +50,26 @@ func _ready():
 	
 	# Create advanced metrics labels if they don't exist
 	_setup_advanced_metrics()
+	
+	# Initialize weapon UI
+	_setup_weapon_ui()
+
+func _setup_weapon_ui():
+	# Store weapon slots in an array for easier access
+	weapon_slots_array = [slot1, slot2, slot3]
+	
+	# Store the styles for active and inactive slots
+	if slot1 and slot1.get("theme_override_styles/panel"):
+		active_style = slot1.get("theme_override_styles/panel")
+		
+		# Create a duplicate style for inactive slots
+		inactive_style = active_style.duplicate()
+		inactive_style.bg_color = Color(0.2, 0.2, 0.2, 0.5)
+		
+		# Initially set all slots to inactive style except the first one
+		for i in range(1, weapon_slots_array.size()):
+			if weapon_slots_array[i]:
+				weapon_slots_array[i].set("theme_override_styles/panel", inactive_style)
 
 func _setup_advanced_metrics():
 	# Only create if debug container exists
@@ -111,11 +145,54 @@ func update_stamina(current_stamina, max_stamina):
 	if stamina_value:
 		stamina_value.text = str(int(current_stamina)) + "/" + str(int(max_stamina))
 
+func update_weapon_indicator(current_index, total_weapons):
+	# First make sure we don't exceed our UI slots
+	var available_slots = min(weapon_slots_array.size(), total_weapons)
+	
+	# Update weapon slots visibility and styling
+	for i in range(weapon_slots_array.size()):
+		if i < available_slots:
+			# Show slots that have weapons
+			weapon_slots_array[i].visible = true
+			
+			# Apply the appropriate style based on whether this is the active weapon
+			if i == current_index:
+				weapon_slots_array[i].set("theme_override_styles/panel", active_style)
+			else:
+				weapon_slots_array[i].set("theme_override_styles/panel", inactive_style)
+		else:
+			# Hide slots for which we don't have weapons
+			weapon_slots_array[i].visible = false
+	
+	# Try to get the weapon name from the player
+	var player = get_node_or_null("/root/GameManager/Player")
+	if player and player.current_weapon:
+		weapon_name.text = player.current_weapon.name
+	else:
+		# Default names based on index if we can't get the actual weapon
+		var weapon_names = ["Morning Star", "Short Sword", "Battle Axe"]
+		if current_index < weapon_names.size():
+			weapon_name.text = weapon_names[current_index]
+		else:
+			weapon_name.text = "Weapon " + str(current_index + 1)
+
 func _on_stamina_changed(current_stamina, max_stamina):
 	update_stamina(current_stamina, max_stamina)
 
 func _on_health_changed(current_health, max_health):
 	update_health(current_health, max_health)
+
+func _on_weapon_changed(weapon_index):
+	# Weapon index is the new active weapon
+	var player = get_node_or_null("/root/GameManager/Player")
+	var total_weapons = 1  # Default to 1 if we can't find the player
+	
+	if player and player.has_method("get_weapon_count"):
+		total_weapons = player.get_weapon_count()
+	elif player and "weapons" in player:
+		total_weapons = player.weapons.size()
+	
+	update_weapon_indicator(weapon_index, total_weapons)
 
 func toggle_debug_info():
 	show_debug_info = !show_debug_info

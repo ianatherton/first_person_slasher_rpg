@@ -1,0 +1,40 @@
+[gd_scene load_steps=5 format=3 uid="uid://brdmk10jrh48j"]
+
+[ext_resource type="Script" path="res://scripts/weapon.gd" id="1_7wvpw"]
+[ext_resource type="PackedScene" path="res://assets/models/short_sword.blend" id="2_a03lw"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_p6gtn"]
+size = Vector3(0.1, 0.5, 0.02)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_5hmbn"]
+size = Vector3(0.1, 0.1, 0.6)
+
+[node name="ShortSword" type="Node3D"]
+script = ExtResource("1_7wvpw")
+damage = 30
+attack_range = 2.0
+attack_rate = 1.2
+stamina_cost = 8
+swing_speed = 1.2
+recoil_strength = 0.5
+weapon_type = 1
+
+[node name="ShortSwordModel" parent="." instance=ExtResource("2_a03lw")]
+
+[node name="HitboxBlade" type="Area3D" parent="ShortSwordModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, -0.6)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ShortSwordModel/HitboxBlade"]
+shape = SubResource("BoxShape3D_p6gtn")
+
+[node name="HitboxHandle" type="Area3D" parent="ShortSwordModel"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.3)
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="ShortSwordModel/HitboxHandle"]
+shape = SubResource("BoxShape3D_5hmbn")
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]

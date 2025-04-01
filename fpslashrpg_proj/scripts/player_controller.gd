@@ -30,6 +30,9 @@ var health = 0
 # Weapon variables
 var weapons = []
 var current_weapon_index = 0
+var weapon_switch_cooldown = 0.5
+var can_switch_weapon = true
+var weapon_switch_timer = 0.0
 
 # Movement state tracking
 enum MovementState { IDLE, WALKING, SPRINTING }
@@ -52,10 +55,13 @@ func _ready():
 	for child in weapon_holder.get_children():
 		if child.has_method("attack"):
 			weapons.append(child)
+			# Initially hide all weapons
+			child.visible = false
 			print("Added weapon to array: " + child.name)
 	
 	if weapons.size() > 0:
 		current_weapon = weapons[0]
+		current_weapon.visible = true
 		print("Current weapon set to: " + current_weapon.name)
 	else:
 		print("Warning: No weapons found in weapon holder")
@@ -84,11 +90,19 @@ func _input(event):
 			Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 			game_state.pause_game(false)
 	
-	# Weapon switching
+	# Weapon switching with mouse wheel
 	if event.is_action_pressed("next_weapon"):
 		switch_weapon(1)
 	elif event.is_action_pressed("prev_weapon"):
 		switch_weapon(-1)
+	
+	# Direct weapon selection with number keys
+	if event.is_action_pressed("weapon_slot_1"):
+		switch_to_weapon_slot(0)
+	elif event.is_action_pressed("weapon_slot_2"):
+		switch_to_weapon_slot(1)
+	elif event.is_action_pressed("weapon_slot_3"):
+		switch_to_weapon_slot(2)
 		
 	# Attack with left mouse button
 	if event.is_action_pressed("attack"):
@@ -100,18 +114,19 @@ func _input(event):
 			var debug_enabled = player_hud.toggle_debug_info()
 			print("Debug info " + ("enabled" if debug_enabled else "disabled"))
 
-func _process(_delta):
+func _process(delta):
 	if game_state.game_paused:
 		return
 		
 	# Update GameState stamina
 	game_state.set_stamina(stamina)
 	
-	# Check for weapon switching
-	if Input.is_action_just_pressed("next_weapon"):
-		switch_weapon(1)
-	elif Input.is_action_just_pressed("prev_weapon"):
-		switch_weapon(-1)
+	# Handle weapon switching cooldown
+	if not can_switch_weapon:
+		weapon_switch_timer += delta
+		if weapon_switch_timer >= weapon_switch_cooldown:
+			can_switch_weapon = true
+			weapon_switch_timer = 0.0
 	
 	# Debug info toggle
 	if Input.is_action_just_pressed("toggle_debug") and player_hud:
@@ -138,7 +153,6 @@ func _physics_process(delta):
 	
 	# Calculate speed based on sprint state and attack state
 	var current_speed = speed
-	var weapon = $Head/Camera3D/WeaponHolder/MorningStar
 	var attack_speed_penalty = 0.5 # 50% speed during attacks
 	
 	# Apply sprint multiplier if sprinting
@@ -146,7 +160,7 @@ func _physics_process(delta):
 		current_speed *= sprint_speed_multiplier
 	
 	# Apply attack speed penalty if attacking
-	if weapon and weapon.has_method("is_attack_in_progress") and weapon.is_attack_in_progress():
+	if current_weapon and current_weapon.has_method("is_attack_in_progress") and current_weapon.is_attack_in_progress():
 		current_speed *= attack_speed_penalty
 
 	# Movement
@@ -229,8 +243,12 @@ func perform_attack():
 			events.emit_signal("player_attacked", current_weapon)
 
 func switch_weapon(direction):
-	if weapons.size() <= 1:
-		return  # Only one or no weapons
+	if weapons.size() <= 1 or not can_switch_weapon:
+		return  # Only one/no weapons or on cooldown
+	
+	# Put switching on cooldown
+	can_switch_weapon = false
+	weapon_switch_timer = 0.0
 	
 	# Hide current weapon
 	if current_weapon:
@@ -245,5 +263,41 @@ func switch_weapon(direction):
 	current_weapon = weapons[current_weapon_index]
 	current_weapon.visible = true
 	
+	# Play weapon switch sound/animation here if needed
+	
 	print("Switched to weapon: " + current_weapon.name)
 	events.emit_signal("player_weapon_changed", current_weapon_index)
+	
+	# Update HUD if available
+	if player_hud and player_hud.has_method("update_weapon_indicator"):
+		player_hud.update_weapon_indicator(current_weapon_index, weapons.size())
+
+func switch_to_weapon_slot(slot_index):
+	if slot_index < 0 or slot_index >= weapons.size() or not can_switch_weapon:
+		return  # Invalid slot or on cooldown
+	
+	# Skip if already using this weapon
+	if slot_index == current_weapon_index:
+		return
+	
+	# Put switching on cooldown
+	can_switch_weapon = false
+	weapon_switch_timer = 0.0
+	
+	# Hide current weapon
+	if current_weapon:
+		current_weapon.visible = false
+	
+	# Set and show new weapon
+	current_weapon_index = slot_index
+	current_weapon = weapons[current_weapon_index]
+	current_weapon.visible = true
+	
+	# Play weapon switch sound/animation here if needed
+	
+	print("Switched to weapon slot " + str(slot_index + 1) + ": " + current_weapon.name)
+	events.emit_signal("player_weapon_changed", current_weapon_index)
+	
+	# Update HUD if available
+	if player_hud and player_hud.has_method("update_weapon_indicator"):
+		player_hud.update_weapon_indicator(current_weapon_index, weapons.size())
