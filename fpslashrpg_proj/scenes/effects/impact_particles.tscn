@@ -1,6 +1,7 @@
-[gd_scene load_steps=6 format=3 uid="uid://dxoajicm5lwty"]
+[gd_scene load_steps=9 format=3 uid="uid://dxoajicm5lwty"]
 
 [ext_resource type="Script" path="res://scripts/effects/impact_particles.gd" id="1_xf8kw"]
+[ext_resource type="Texture2D" path="res://assets/textures/spark.png" id="2_lc5j0"]
 
 [sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_g5f7e"]
 emission_shape = 1
@@ -14,20 +15,52 @@ scale_min = 0.1
 scale_max = 0.3
 color = Color(1, 0.784314, 0.25098, 1)
 
-[sub_resource type="SphereMesh" id="SphereMesh_qwj3o"]
-radius = 0.1
-height = 0.2
-radial_segments = 8
-rings = 4
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_4n8dj"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_lc5j0")
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
 
-[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hxq0b"]
+[sub_resource type="QuadMesh" id="QuadMesh_jc1e3"]
+material = SubResource("StandardMaterial3D_4n8dj")
+size = Vector2(0.15, 0.15)
+
+[sub_resource type="ParticleProcessMaterial" id="ParticleProcessMaterial_2vwgh"]
+emission_shape = 1
+emission_sphere_radius = 0.01
+direction = Vector3(0, 1, 0)
+spread = 70.0
+gravity = Vector3(0, -3, 0)
+initial_velocity_min = 3.0
+initial_velocity_max = 7.0
+scale_min = 0.1
+scale_max = 0.3
+color = Color(1, 0.784314, 0.25098, 1)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_j4bck"]
+transparency = 1
+blend_mode = 1
+shading_mode = 0
+vertex_color_use_as_albedo = true
+albedo_texture = ExtResource("2_lc5j0")
 emission_enabled = true
 emission = Color(1, 0.631373, 0.25098, 1)
 emission_energy_multiplier = 5.0
+billboard_mode = 3
+billboard_keep_scale = true
+particles_anim_h_frames = 1
+particles_anim_v_frames = 1
+particles_anim_loop = false
 
-[sub_resource type="PrismMesh" id="PrismMesh_cjk5h"]
-material = SubResource("StandardMaterial3D_hxq0b")
-size = Vector3(0.1, 0.1, 0.03)
+[sub_resource type="QuadMesh" id="QuadMesh_tq3hv"]
+material = SubResource("StandardMaterial3D_j4bck")
+size = Vector2(0.2, 0.2)
 
 [node name="ImpactParticles" type="GPUParticles3D"]
 emitting = false
@@ -36,7 +69,7 @@ lifetime = 0.5
 one_shot = true
 explosiveness = 0.9
 process_material = SubResource("ParticleProcessMaterial_g5f7e")
-draw_pass_1 = SubResource("SphereMesh_qwj3o")
+draw_pass_1 = SubResource("QuadMesh_jc1e3")
 script = ExtResource("1_xf8kw")
 
 [node name="SparkParticles" type="GPUParticles3D" parent="."]
@@ -46,8 +79,8 @@ amount = 12
 lifetime = 0.4
 one_shot = true
 explosiveness = 0.95
-process_material = SubResource("ParticleProcessMaterial_g5f7e")
-draw_pass_1 = SubResource("PrismMesh_cjk5h")
+process_material = SubResource("ParticleProcessMaterial_2vwgh")
+draw_pass_1 = SubResource("QuadMesh_tq3hv")
 
 [node name="DestroyTimer" type="Timer" parent="."]
 wait_time = 2.0

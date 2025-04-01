@@ -107,6 +107,42 @@ var attack_animations = {
 			"position_offset_start": Vector3(0.2, -0.2, -0.1),  # Start lower right
 			"position_offset_mid": Vector3(0.0, 0.0, -0.2),     # Middle position
 			"position_offset_end": Vector3(-0.2, 0.2, -0.1)     # End upper left
+		},
+		{
+			"name": "wide_horizontal_sweep",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.2, 1.5, 0.2),   # Wider horizontal sweep right to left
+			"duration": 2.0,  # Much slower for smoother motion
+			"position_offset_start": Vector3(0.4, 0.1, -0.2),  # Start right
+			"position_offset_mid": Vector3(0.0, 0.15, -0.2),   # Minimal vertical movement
+			"position_offset_end": Vector3(-0.4, 0.1, -0.2)    # End left, same height
+		},
+		{
+			"name": "wide_horizontal_sweep_reverse",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.2, -1.5, 0.2),  # Wider horizontal sweep left to right
+			"duration": 2.0,  # Much slower for smoother motion
+			"position_offset_start": Vector3(-0.4, 0.1, -0.2),  # Start left
+			"position_offset_mid": Vector3(0.0, 0.15, -0.2),    # Minimal vertical movement
+			"position_offset_end": Vector3(0.4, 0.1, -0.2)    # End right, same height
+		},
+		{
+			"name": "heavy_diagonal_slash",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.6, 1.0, 0.2),  # Diagonal slash
+			"duration": 2.2,  # Very slow execution
+			"position_offset_start": Vector3(0.3, -0.3, -0.2),  # Start lower right
+			"position_offset_mid": Vector3(0.0, -0.15, -0.25),  # Gradual transition
+			"position_offset_end": Vector3(-0.3, 0.3, -0.2)     # End upper left
+		},
+		{
+			"name": "spinning_slash",
+			"origin": Vector3.ZERO,
+			"target": Vector3(-0.5, 2.5, 0.0),  # Full circular motion
+			"duration": 2.5,  # Very slow spinning slash
+			"position_offset_start": Vector3(0.3, 0.0, -0.2),   # Start position
+			"position_offset_mid": Vector3(0.0, 0.25, -0.2),    # Minimal vertical change
+			"position_offset_end": Vector3(-0.3, 0.0, -0.2)     # End position, same height as start
 		}
 	]
 }
@@ -344,7 +380,17 @@ func _process(delta):
 	
 	# Process swing animation (only if not in recoil)
 	elif is_swinging:
-		swing_progress += delta * 3.0 * swing_speed
+		# Calculate swing speed based on animation duration if available
+		var speed_multiplier = 1.0
+		if animation_data and animation_data.has("duration") and animation_data.duration > 0:
+			# Use the inverse of duration to get the proper speed (longer duration = slower animation)
+			speed_multiplier = 1.0 / animation_data.duration
+		else:
+			# Fallback to the old calculation if no duration is available
+			speed_multiplier = 3.0 * swing_speed
+		
+		swing_progress += delta * speed_multiplier
+		
 		if swing_progress >= 1.0:
 			is_swinging = false
 			swing_progress = 0.0
@@ -623,28 +669,101 @@ func spawn_impact_particles(body, impact_type: int) -> void:
 	var particles = impact_particle_scene.instantiate()
 	get_tree().current_scene.add_child(particles)
 	
-	# Position at impact point - use hitbox position for now
-	# In a full physics system, we would get the exact contact point
+	# IMPROVED: Find a better spawn position for particles within the hitbox bounds
 	var impact_position = hitbox.global_position
+	var direction = Vector3.ZERO
 	
-	# If the body has a collision shape, use its position for better precision
+	# Get the hitbox collision shape for bounds calculation
+	var hitbox_shape = null
+	var hitbox_size = Vector3(0.2, 0.2, 0.2)  # Default size
+	var hitbox_radius = 0.3  # Default radius
+	
+	for child in hitbox.get_children():
+		if child is CollisionShape3D and child.shape:
+			hitbox_shape = child.shape
+			if hitbox_shape is BoxShape3D:
+				hitbox_size = hitbox_shape.size
+			elif hitbox_shape is SphereShape3D:
+				hitbox_radius = hitbox_shape.radius
+			break
+			
+	# Find closest point on body to use as reference
+	var body_collision_point = null
+	var closest_distance = 999999.0
+	
 	if body is CollisionObject3D:
-		for child in body.get_children():
-			if child is CollisionShape3D:
-				# Position particles at halfway point between hitbox and collision shape
-				impact_position = (hitbox.global_position + child.global_position) / 2
-				break
+		# Try to find the exact collision point using PhysicsBodyDirectSpaceState3D if available
+		var space_state = get_world_3d().direct_space_state
+		if space_state:
+			# Define query parameters for a ray from hitbox to body center
+			var query = PhysicsRayQueryParameters3D.new()
+			query.from = hitbox.global_position
+			query.to = body.global_position
+			query.collision_mask = body.collision_layer
+			query.collide_with_bodies = true
+			query.exclude = [hitbox]
+			
+			# Perform the raycast
+			var collision = space_state.intersect_ray(query)
+			if collision and collision.has("position"):
+				body_collision_point = collision.position
+				direction = (body_collision_point - impact_position).normalized()
+			else:
+				# Fallback: Check all collision shapes in the body
+				for child in body.get_children():
+					if child is CollisionShape3D:
+						var to_child_dir = (child.global_position - impact_position).normalized()
+						var dist = child.global_position.distance_to(impact_position)
+						
+						if dist < closest_distance:
+							closest_distance = dist
+							body_collision_point = child.global_position
+							direction = to_child_dir
+		
+	# If we couldn't find a good collision point, use body position
+	if not body_collision_point:
+		body_collision_point = body.global_position
+		direction = (body_collision_point - impact_position).normalized()
 	
-	particles.global_position = impact_position
+	# Calculate offset from hitbox center based on shape
+	var offset = Vector3.ZERO
+	if hitbox_shape is BoxShape3D:
+		# For box shapes, find a point on the surface in the direction of the hit
+		offset.x = clamp(direction.x * hitbox_size.x * 0.5, -hitbox_size.x * 0.5, hitbox_size.x * 0.5)
+		offset.y = clamp(direction.y * hitbox_size.y * 0.5, -hitbox_size.y * 0.5, hitbox_size.y * 0.5)
+		offset.z = clamp(direction.z * hitbox_size.z * 0.5, -hitbox_size.z * 0.5, hitbox_size.z * 0.5)
+	elif hitbox_shape is SphereShape3D:
+		# For sphere shapes, find a point on the surface
+		offset = direction * hitbox_radius
+	
+	# Add some randomization within bounds of the hitbox (25% of the way from center to edge)
+	var rand_factor = 0.25
+	if hitbox_shape is BoxShape3D:
+		offset.x += randf_range(-hitbox_size.x * rand_factor, hitbox_size.x * rand_factor)
+		offset.y += randf_range(-hitbox_size.y * rand_factor, hitbox_size.y * rand_factor)
+		offset.z += randf_range(-hitbox_size.z * rand_factor, hitbox_size.z * rand_factor)
+	elif hitbox_shape is SphereShape3D:
+		offset += Vector3(
+			randf_range(-hitbox_radius * rand_factor, hitbox_radius * rand_factor),
+			randf_range(-hitbox_radius * rand_factor, hitbox_radius * rand_factor),
+			randf_range(-hitbox_radius * rand_factor, hitbox_radius * rand_factor)
+		)
+	
+	# Apply the offset to get the impact position
+	impact_position += offset
+	
+	# Ensure particles don't spawn inside the hit body by pulling them slightly toward the weapon
+	# Get the midpoint between current position and hitbox center, then move 10% toward weapon
+	var safe_position = impact_position.lerp(hitbox.global_position, 0.1)
+	particles.global_position = safe_position
 	
 	# Orient particles to face away from hitbox
-	var direction = (impact_position - global_position).normalized()
 	particles.look_at(particles.global_position + direction, Vector3.UP)
 	
 	# Play the impact effect with the determined type
 	if particles.has_method("play_impact"):
 		particles.play_impact(impact_type)
-		print("Spawned impact particles of type: " + str(impact_type) + " at " + str(impact_position))
+		print("Spawned impact particles of type: " + str(impact_type) + " at " + str(particles.global_position))
 
 func make_node_invisible(node: Node) -> void:
 	if node is MeshInstance3D:
